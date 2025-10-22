@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sliding Config Panel</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden; /* prevents showing scrollbar during slide */
+    font-family: sans-serif;
+  }
+  .container {
+    display: flex;
+    width: 200vw; /* space for two full width views */
+    transition: transform 0.4s ease;
+  }
+  .view {
+    width: 100vw;
+    height: 100vh;
+    box-sizing: border-box;
+  }
+
+  /* Main page */
+  .main {
+    background: #f2f2f2;
+    position: relative;
+  }
+  nav {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 20px;
+    background: #333;
+    color: white;
+  }
+  nav button {
+    background: #555;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+
+  /* Config page */
+  .config {
+    background: white;
+    padding: 20px;
+  }
+  .slide-left { transform: translateX(-100vw); }
+</style>
+</head>
+<body>
+
+<div class="container" id="container">
+  <!-- MAIN PAGE -->
+  <div class="view main">
+    <nav>
+      <button id="btnConfig">Config</button>
+    </nav>
+    <div style="padding:20px;">
+      <h1>Main Page</h1>
+      <p>Content...</p>
+    </div>
+  </div>
+
+  <!-- CONFIG PAGE -->
+  <div class="view config">
+    <button id="btnClose">Close</button>
+    <h2>Config Page</h2>
+    <p>Settings go here...</p>
+  </div>
+</div>
+
+<script>
+const container = document.getElementById('container');
+document.getElementById('btnConfig').onclick = () => {
+  container.classList.add('slide-left');
+}
+document.getElementById('btnClose').onclick = () => {
+  container.classList.remove('slide-left');
+}
+</script>
+
+</body>
+</html>
