@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>necoGraph</title>
+    <style>
+        :root {
+            --ratio: 1.25;
+            --step-0: 1rem;
+            --step-1: calc(var(--step-0) * var(--ratio));
+            --step-2: calc(var(--step-1) * var(--ratio));
+            --step-3: calc(var(--step-2) * var(--ratio));
+            --step-4: calc(var(--step-3) * var(--ratio));
+            --step-5: calc(var(--step-4) * var(--ratio));
+            --step-6: calc(var(--step-5) * var(--ratio));
+            --step-7: calc(var(--step-6) * var(--ratio));
+            --step-8: calc(var(--step-7) * var(--ratio));
+            --step-9: calc(var(--step-8) * var(--ratio));
+            --step-10: calc(var(--step-9) * var(--ratio));
+            --step-11: calc(var(--step-10) * var(--ratio));
+            --step-12: calc(var(--step-11) * var(--ratio));
+            --step-13: calc(var(--step-12) * var(--ratio));
+            --step-14: calc(var(--step-13) * var(--ratio));
+            --step-15: calc(var(--step-14) * var(--ratio));
+            --step--1: calc(var(--step-0) / var(--ratio));
+            --step--2: calc(var(--step--1) / var(--ratio));
+            --step--3: calc(var(--step--2) / var(--ratio));
+            --step--4: calc(var(--step--3) / var(--ratio));
+        }
+
+        *, *::before, *::after { box-sizing: border-box }
+        html, body {overflow: hidden}
+        * { margin: 0 }
+
+        body {
+            font-family: sans-serif;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        #container {
+            display: flex;
+            width: 400vw;
+            transition: transform 0.6s ease;
+            background: #20202b;
+        }
+        
+        .view {
+            width: 100vw;
+            height: 100vh;
+            padding: 0 var(--step-0); ;
+        }
+
+        .network {}
+        .main {}
+        .config {}
+        .settings {}
+
+        nav {
+            height: var(--step-6); ;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #20202b;
+            color: #BFCDE7;
+            padding-right: var(--step-14);
+        }
+
+        nav > h1 {
+            opacity: 0%;
+            transition: opacity 0.8s linear;
+        }
+
+        #breadcrumb {
+            position: fixed;
+            display: flex;
+            flex-direction: row;
+            height: var(--step-6) ;
+            z-index: 10;
+            padding: var(--step--3) 0;
+            margin: 0 var(--step--3);
+            right:0;
+        }
+
+        #breadcrumb > svg {
+            cursor: pointer;
+        }
+
+        #bcselect {
+            position: absolute;
+            border-bottom: 3px solid #BFCDE7;
+            width: 14.286%;
+            height: 100%;
+            left: 0%;
+            top: 0%;
+            transition: left 0.6s ease;
+        }
+
+        #bcselect.command {left:28.571%}
+        #bcselect.graph {left:57.143%}
+        #bcselect.settings {left:85.714%}
+
+        #container.command {transform: translateX(-100vw)}
+        #container.graph{transform: translateX(-200vw)}
+        #container.settings {transform: translateX(-300vw)}
+
+        #container.network > .network h1 {opacity: 100%}
+        #container.command > .command h1 {opacity: 100%}
+        #container.graph > .graph h1 {opacity: 100%}
+        #container.settings > .settings h1 {opacity: 100%}
+
+        @media (max-width: 768px) {
+            #breadcrumb {
+                height: var(--step-5) ;
+                padding: var(--step--2) 0;
+                margin: 0 var(--step--2);
+            }
+            nav {
+                height: var(--step-5); ;
+                padding-right: var(--step-12);
+            }
+            h1 {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="breadcrumb">
+        <div id="bcselect"></div>
+        <svg onclick="toNetwork()" width="100%" height="100%" viewBox="0 0 24 24" preserveAspectRatio="xMinYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path opacity="0.5" stroke="#BFCDE7" stroke-width="1.5" d="M20.47 10.9182C20.47 10.9182 18.6229 10.3027 16.1603 7.8401C13.6976 5.37747 13.082 3.53027 13.082 3.53027"/>
+            <path fill="#BFCDE7" d="M16.6905 8.37043C16.9834 8.07754 16.9834 7.60266 16.6905 7.30977C16.3977 7.01687 15.9228 7.01687 15.6299 7.30976L16.6905 8.37043ZM1.63576 9.03145C1.27368 9.23261 1.14322 9.68922 1.34439 10.0513C1.54555 10.4134 2.00215 10.5438 2.36424 10.3427L1.63576 9.03145ZM13.6576 21.636C13.4565 21.9981 13.5869 22.4547 13.949 22.6558C14.3111 22.857 14.7677 22.7265 14.9688 22.3644L13.6576 21.636ZM4.46967 18.4699C4.17678 18.7628 4.17678 19.2376 4.46967 19.5305C4.76256 19.8234 5.23743 19.8234 5.53033 19.5305L4.46967 18.4699ZM12.7177 2.87466L1.63576 9.03145L2.36424 10.3427L13.4462 4.18589L12.7177 2.87466ZM19.8143 10.5539L13.6576 21.636L14.9688 22.3644L21.1255 11.2824L19.8143 10.5539ZM15.6299 7.30976L4.46967 18.4699L5.53033 19.5305L16.6905 8.37043L15.6299 7.30976Z"/>
+            <path opacity="0.5" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" d="M13.0818 10.918C15.122 12.9581 18.4297 12.9581 20.4698 10.918C22.5099 8.87785 22.5099 5.57019 20.4698 3.53008C18.4297 1.48997 15.122 1.48997 13.0818 3.53008C11.0417 5.57019 11.0417 8.87785 13.0818 10.918Z"/>
+        </svg>
+        <svg width="100%" height="100%" viewBox="0 0 24 24" preserveAspectRatio="xMinYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path opacity="0.5" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" d="M 4 12 H 20"/>
+        </svg>
+        <svg onclick="toCommand()" width="100%" height="100%" viewBox="0 0 24 24" preserveAspectRatio="xMaxYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path opacity="0.5" stroke="#BFCDE7" stroke-width="1.5" d="M7 10C7 8.58579 7 7.87868 7.43934 7.43934C7.87868 7 8.58579 7 10 7H14C15.4142 7 16.1213 7 16.5607 7.43934C17 7.87868 17 8.58579 17 10V14C17 15.4142 17 16.1213 16.5607 16.5607C16.1213 17 15.4142 17 14 17H10C8.58579 17 7.87868 17 7.43934 16.5607C7 16.1213 7 15.4142 7 14V10Z"/>
+            <path stroke="#BFCDE7" stroke-width="1.5" d="M4 12C4 8.22876 4 6.34315 5.17157 5.17157C6.34315 4 8.22876 4 12 4C15.7712 4 17.6569 4 18.8284 5.17157C20 6.34315 20 8.22876 20 12C20 15.7712 20 17.6569 18.8284 18.8284C17.6569 20 15.7712 20 12 20C8.22876 20 6.34315 20 5.17157 18.8284C4 17.6569 4 15.7712 4 12Z"/>
+            <path opacity="0.5" d="M4 12H2" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round"/>
+            <path opacity="0.5" d="M22 12H20" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round"/>
+            <path opacity="0.5" d="M4 9H2" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round"/>
+            <path opacity="0.5" d="M22 9H20" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round"/>
+            <path opacity="0.5" d="M4 15H2" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round"/>
+            <path opacity="0.5" d="M22 15H20" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round"/>
+            <path opacity="0.5" d="M12 20L12 22" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round"/>
+            <path opacity="0.5" d="M12 2L12 4" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round"/>
+            <path opacity="0.5" d="M9 20L9 22" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round"/>
+            <path opacity="0.5" d="M9 2L9 4" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round"/>
+            <path opacity="0.5" d="M15 20L15 22" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round"/>
+            <path opacity="0.5" d="M15 2L15 4" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <svg width="100%" height="100%" viewBox="0 0 24 24" preserveAspectRatio="xMinYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path opacity="0.5" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" d="M 4 12 H 20"/>
+        </svg>
+        <svg onclick="toGraph()" width="100%" height="100%" viewBox="0 0 24 24" preserveAspectRatio="xMaxYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path stroke="#BFCDE7" stroke-width="1.5" d="M2 11C2 7.22876 2 5.34315 3.17157 4.17157C4.34315 3 6.22876 3 10 3H14C17.7712 3 19.6569 3 20.8284 4.17157C22 5.34315 22 7.22876 22 11V13C22 16.7712 22 18.6569 20.8284 19.8284C19.6569 21 17.7712 21 14 21H10C6.22876 21 4.34315 21 3.17157 19.8284C2 18.6569 2 16.7712 2 13V11Z"/>
+            <path opacity="0.5" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" d="M15 21L15 3"/>
+            <path stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M6 14L5 15L6 16M10.5 16L11.5 17L10.5 18M9 14L7.5 18"/>
+        </svg>
+        <svg width="100%" height="100%" viewBox="0 0 24 24" preserveAspectRatio="xMinYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path opacity="0.5" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" d="M 4 12 H 20"/>
+        </svg>
+        <svg onclick="toSettings()" width="100%" height="100%" viewBox="0 0 24 24" preserveAspectRatio="xMaxYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path opacity="0.5" stroke="#BFCDE7" stroke-width="1.5" d="M16 4.00195C18.175 4.01406 19.3529 4.11051 20.1213 4.87889C21 5.75757 21 7.17179 21 10.0002V16.0002C21 18.8286 21 20.2429 20.1213 21.1215C19.2426 22.0002 17.8284 22.0002 15 22.0002H9C6.17157 22.0002 4.75736 22.0002 3.87868 21.1215C3 20.2429 3 18.8286 3 16.0002V10.0002C3 7.17179 3 5.75757 3.87868 4.87889C4.64706 4.11051 5.82497 4.01406 8 4.00195"/>
+            <path d="M10.5 14L17 14" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" />
+            <path d="M7 14H7.5" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" />
+            <path d="M7 10.5H7.5" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" />
+            <path d="M7 17.5H7.5" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" />
+            <path d="M10.5 10.5H17" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" />
+            <path d="M10.5 17.5H17" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" />
+            <path stroke="#BFCDE7" stroke-width="1.5" d="M8 3.5C8 2.67157 8.67157 2 9.5 2H14.5C15.3284 2 16 2.67157 16 3.5V4.5C16 5.32843 15.3284 6 14.5 6H9.5C8.67157 6 8 5.32843 8 4.5V3.5Z"/>
+        </svg>
+    </div>
+    <div id="container" class="network">
+        <div class="view network">
+            <nav>
+                <h1>Network</h1>
+            </nav>
+            <div class="content">
+            </div>
+        </div>
+
+        <div class="view command">
+            <nav>
+                <h1>Command</h1>
+                <div class="pagenav">
+                    <div class="couple"></div>
+                </div>
+            </nav>
+            <div class="content">
+            </div>
+        </div>
+        
+        <div class="view graph">
+            <nav>
+                <h1>Graph</h1>
+            </nav>
+            <div class="content">
+            </div>
+        </div>
+        
+        <div class="view settings">
+            <nav>
+                <h1>Settings</h1>
+            </nav>
+            <div class="content">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById('container');
+        const bcSelect = document.getElementById('bcselect');
+        function toNetwork() {
+            container.className = "network";
+            bcSelect.className = "network";
+        };
+        function toCommand() {
+            container.className = "command";
+            bcSelect.className = "command";
+        }
+        function toGraph() {
+            container.className = "graph";
+            bcSelect.className = "graph";
+        }
+        function toSettings() {
+            container.className = "settings";
+            bcSelect.className = "settings";
+        }
+    </script>
+
+</body>
+</html>
