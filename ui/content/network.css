@@ -1,0 +1,43 @@
+.network-box {
+    padding: var(--step-1);
+    box-shadow: rgba(0, 0, 0, 0.4) 0px 4px 12px;
+    margin-top: var(--step-4);
+    background-color: #2d2f34;
+    color: #bfcde7;
+}
+
+.network-box h3 {
+    margin-bottom: var(--step-1);
+}
+
+.network-box .device-box {
+    /* box-shadow: rgba(0, 0, 0, 0.4) 0px 4px 12px; */
+    /* margin-top: var(--step-1); */
+    background-color: #2d2f34;
+    color: #bfcde7;
+    padding: var(--step-1);
+    border-top: 1px solid #bfcde7;
+}
+
+.network-box .device-elm {
+    display: flex;
+    justify-content: space-between;
+
+}
+
+.network-box .device-box h4 {
+    margin-bottom: var(--step--2);
+}
+
+.network-box .device-box p {
+    margin: 0;
+}
+
+.network-box .device-connect {
+    height: var(--step-6);
+    padding: var(--step--3);
+}
+
+.network-box .device-connect > svg {
+    cursor: pointer;
+}
