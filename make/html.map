@@ -1,0 +1,4 @@
+{{layout-css}}:ui/dist/index.css
+{{network-html}}:ui/content/network.html
+{{command-html}}:ui/content/command.html
+{{layout-js}}:ui/dist/index.js
