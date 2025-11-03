@@ -24,12 +24,12 @@ build: ui/layout.html ui/dist/index.css ui/dist/index.js
 	cd build && cmake -DPICO_BOARD=pico2_w .. && $(MAKE)
 	@echo "Built test version → ui/dist/index.html"
 
-ui/dist/index.css: ui/layout.css ui/content/network.css ui/content/command.css
+ui/dist/index.css: ui/layout.css ui/content/network.css ui/content/command.css ui/content/graph.css
 	@mkdir -p ui/dist
 	$(call compose,ui/layout.css,make/css.map,ui/dist/index.css)
 	@echo "Built test version → ui/dist/index.css"
 
-ui/dist/index.js: ui/layout.js ui/content/network.js ui/content/command.js
+ui/dist/index.js: ui/layout.js ui/content/network.js ui/content/command.js ui/content/graph.js
 	@mkdir -p ui/dist
 	$(call compose,ui/layout.js,make/js.map,ui/dist/index.js)
 	@echo "Built test version → ui/dist/index.js"

@@ -19,6 +19,10 @@ function toSettings() {
     bcSelect.className = "settings";
 }
 
+toGraph()
+
 /* {{network-js}} */
 
 /* {{command-js}} */
+
+/* {{graph-js}} */
