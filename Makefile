@@ -3,9 +3,25 @@ include make/tpl.mk
 test: ui/layout.html ui/dist/index.css ui/dist/index.js
 	@mkdir -p ui/dist
 	$(call compose,ui/layout.html,make/html.map,ui/dist/index.html)
-# 	gzip -k -9 -f ui/dist/index.html
-# 	xxd -i ui/dist/index.html.gz > ui_dist_index_html_gz.h
-# 	cd build && cmake -DPICO_BOARD=pico2_w .. && $(MAKE)
+	@echo "Built test version → ui/dist/index.html"
+
+dev: ui/layout.html ui/dist/index.css ui/dist/index.js
+	@mkdir -p ui/dist
+	sed -i 's/^const testing = true;/const testing = false;/' ui/dist/index.js
+	$(call compose,ui/layout.html,make/html.map,ui/dist/index.html)
+	gzip -k -9 -f ui/dist/index.html
+	xxd -i ui/dist/index.html.gz > ui_dist_index_html_gz.h
+	cd build && cmake -DPICO_BOARD=pico2_w .. && $(MAKE)
+	@echo "Built test version → ui/dist/index.html"
+
+build: ui/layout.html ui/dist/index.css ui/dist/index.js
+	@mkdir -p ui/dist
+	$(call compose,ui/layout.html,make/html.map,ui/dist/index.html)
+	sed -i '/^[[:space:]]*const[[:space:]]\+testing[[:space:]]*=[[:space:]]*true;[[:space:]]*$/ { N; /^\n$/d; d }' ui/dist/index.html
+	sed -i 's/^[[:space:]]*if[[:space:]]*(\!testing)[[:space:]]*{[[:space:]]*\(.*\)[[:space:]]*}/\1/' file.js ui/dist/index.html
+	gzip -k -9 -f ui/dist/index.html
+	xxd -i ui/dist/index.html.gz > ui_dist_index_html_gz.h
+	cd build && cmake -DPICO_BOARD=pico2_w .. && $(MAKE)
 	@echo "Built test version → ui/dist/index.html"
 
 ui/dist/index.css: ui/layout.css ui/content/network.css ui/content/command.css

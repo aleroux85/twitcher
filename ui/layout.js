@@ -1,3 +1,5 @@
+const testing = true;
+
 const container = document.getElementById('container');
 const bcSelect = document.getElementById('bcselect');
 function toNetwork() {

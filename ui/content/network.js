@@ -72,12 +72,12 @@ function toggleWebSocket(n,d) {
         dv.connected = false;
         dv.switch.querySelector('svg>path').setAttribute("fill","#E7BFBF80");
         dv.switch.querySelector('svg>g').setAttribute("transform","translate(0 3) scale(0.745)");
-        // disconnectWebSocket(networks[n].devices[d]);
+        if (!testing) {disconnectWebSocket(networks[n].devices[d]);}
     } else {
         dv.connected = true;
         dv.switch.querySelector('svg>path').setAttribute("fill","#4CAF5080");
         dv.switch.querySelector('svg>g').setAttribute("transform","translate(5.8 3) scale(0.745)");
-        // connectWebSocket(networks[n].devices[d]);
+        if (!testing) {connectWebSocket(networks[n].devices[d]);}
     }
 }
 
