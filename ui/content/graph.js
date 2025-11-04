@@ -11,6 +11,14 @@ let elements = {}; // {id,type,x,y,r,label,value}
 let idCounter = 1;
 let selected = null;
 
+function saveGraph() {
+    commandInterface = document.getElementById('command');
+
+    Object.entries(elements).forEach(([key,elm]) => {
+        elm.elm.buildUI(commandInterface);
+    })
+}
+
 function createNode(id,obj) {
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.classList.add('node');
@@ -57,7 +65,8 @@ function addElement(type, x = 0, y = 0) {
         y: y,
         r: 0,
         label: type.toUpperCase(),
-        value: ''
+        value: '',
+        elm: new uiButton(type)
     };
     elements[id] = el;
     const node = createNode(id, el);
@@ -208,4 +217,6 @@ svg.addEventListener('wheel', function (e) {
 });
 
 addElement('button', -200, -40);
-addElement('led', -100, -40);
+// addElement('led', -100, -40);
+
+saveGraph();

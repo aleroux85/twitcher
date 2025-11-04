@@ -29,7 +29,7 @@ ui/dist/index.css: ui/layout.css ui/content/network.css ui/content/command.css u
 	$(call compose,ui/layout.css,make/css.map,ui/dist/index.css)
 	@echo "Built test version → ui/dist/index.css"
 
-ui/dist/index.js: ui/layout.js ui/content/network.js ui/content/command.js ui/content/graph.js
+ui/dist/index.js: ui/layout.js ui/content/network.js ui/content/command.js ui/content/graph.js ui/content/components/button.js
 	@mkdir -p ui/dist
 	$(call compose,ui/layout.js,make/js.map,ui/dist/index.js)
 	@echo "Built test version → ui/dist/index.js"
