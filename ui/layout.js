@@ -25,6 +25,6 @@ toCommand()
 
 /* {{command-js}} */
 
-/* {{button-js}} */
+/* {{components-js}} */
 
 /* {{graph-js}} */

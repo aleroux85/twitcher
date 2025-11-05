@@ -29,10 +29,14 @@ ui/dist/index.css: ui/layout.css ui/content/network.css ui/content/command.css u
 	$(call compose,ui/layout.css,make/css.map,ui/dist/index.css)
 	@echo "Built test version → ui/dist/index.css"
 
-ui/dist/index.js: ui/layout.js ui/content/network.js ui/content/command.js ui/content/graph.js ui/content/components/button.js
+ui/dist/index.js: ui/layout.js ui/content/network.js ui/content/command.js ui/content/graph.js ui/content/components.js
 	@mkdir -p ui/dist
 	$(call compose,ui/layout.js,make/js.map,ui/dist/index.js)
 	@echo "Built test version → ui/dist/index.js"
+
+ui/content/components.js: $(wildcard ui/content/components/*.js)
+	$(call compose,ui/content/components/parent.js,make/js-comp.map,ui/content/components.js)
+	@echo "Built test version → ui/content/components.js"
 
 flash:
 	cp build/twitcher.uf2 /media/anro/RP2350/twitcher.uf2 

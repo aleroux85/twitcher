@@ -1,5 +1,5 @@
 {{network-js}}:ui/content/network.js
 {{command-js}}:ui/content/command.js
 {{graph-js}}:ui/content/graph.js
-{{button-js}}:ui/content/components/button.js
+{{components-js}}:ui/content/components.js
 {{settings-js}}:ui/content/settings.js

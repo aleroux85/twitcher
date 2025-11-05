@@ -15,7 +15,7 @@ function saveGraph() {
     commandInterface = document.getElementById('command');
 
     Object.entries(elements).forEach(([key,elm]) => {
-        elm.elm.buildUI(commandInterface);
+        elm.buildUI(commandInterface);
     })
 }
 
@@ -34,7 +34,7 @@ function createNode(id,obj) {
     label.setAttribute('font-size', 10);
     label.setAttribute('text-anchor', 'middle');
     label.setAttribute('fill', '#9fbcd9');
-    label.textContent = obj.label || '';
+    label.textContent = obj.name || '';
     g.appendChild(label);
 
     // selection bubble
@@ -56,21 +56,16 @@ function createNode(id,obj) {
     return g;
 }
 
-function addElement(type, x = 0, y = 0) {
+function addElement(elm, x = 0, y = 0) {
     const id = 'n' + (idCounter++);
+    elm.setCoords(x,y);
+    elm.setName(id);
 
-    const el = {
-        type,
-        x: x,
-        y: y,
-        r: 0,
-        label: type.toUpperCase(),
-        value: '',
-        elm: new uiButton(type)
-    };
-    elements[id] = el;
-    const node = createNode(id, el);
-    return el;
+    const el = elm;
+
+    elements[id] = elm;
+    const node = createNode(id, elm);
+    return elm;
 }
 
 // render nodes from elements
@@ -216,7 +211,7 @@ svg.addEventListener('wheel', function (e) {
     setView();
 });
 
-addElement('button', -200, -40);
-// addElement('led', -100, -40);
+addElement(new uiButton(), -200, -40);
+addElement(new uiLed(), -100, -40);
 
 saveGraph();
