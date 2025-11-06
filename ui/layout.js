@@ -19,8 +19,6 @@ function toSettings() {
     bcSelect.className = "settings";
 }
 
-toCommand()
-
 /* {{network-js}} */
 
 /* {{command-js}} */

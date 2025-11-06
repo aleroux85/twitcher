@@ -8,14 +8,24 @@
 
 #graph > .buttons {
     position:absolute;
+    display: flex;
     right: 0;
     padding: var(--step-0);
 }
 
-#graph > .buttons > .write {
-    height: var(--step-6);
+#graph > .buttons > div {
+    height: var(--step-5);
     border: 3px solid var(--clr-face);
     border-radius: 100%;
-    padding: var(--step--3);
+    padding: var(--step--4);
     cursor: pointer;
+    margin-left: var(--step-0);
+}
+
+#graph > .buttons > .connector {
+    background-color: var(--clr-red);
+}
+
+#graph > .buttons > .connector.active {
+    background-color: var(--clr-green);
 }

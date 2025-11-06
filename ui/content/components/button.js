@@ -1,6 +1,17 @@
 class uiButton extends uiComponents {
     constructor() {
         super("button");
+        this.connect = {
+            inputs:[],
+            outputs:[
+                {
+                    type:"bool",
+                    connected:null
+                }
+            ],
+            actDir:"outputs",
+            actNum:0
+        };
     }
 
     buildUI(commandInterface) {

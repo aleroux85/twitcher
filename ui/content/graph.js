@@ -10,6 +10,7 @@ setView();
 let elements = {}; // {id,type,x,y,r,label,value}
 let idCounter = 1;
 let selected = null;
+let wireMode = false;
 
 function saveGraph() {
     commandInterface = document.getElementById('command');
@@ -17,6 +18,20 @@ function saveGraph() {
     Object.entries(elements).forEach(([key,elm]) => {
         elm.buildUI(commandInterface);
     })
+}
+
+function toggleConnectMode() {
+    wireButton = document.getElementById('wire');
+    
+    if (wireMode) {
+        wireMode = false;
+        wireButton.classList.remove('active')
+    } else {
+        wireButton.classList.add('active')
+        wireMode = true;
+    }
+
+    highlightSelection();
 }
 
 function createNode(id,obj) {
@@ -61,8 +76,6 @@ function addElement(elm, x = 0, y = 0) {
     elm.setCoords(x,y);
     elm.setName(id);
 
-    const el = elm;
-
     elements[id] = elm;
     const node = createNode(id, elm);
     return elm;
@@ -81,17 +94,52 @@ function render() {
 
 // selection management
 function selectById(id) {
-    selected = elements[id];
-    selected.id = id;
+    if (id === null) {
+        selected = null;
+    } else {
+        selected = elements[id];
+        selected.id = id;
+    }
     // updatePropsPanel();
     highlightSelection();
 }
 
 function highlightSelection() {
-    document.querySelectorAll('.node').forEach(n => {
+    let connect = false;
+    let connDir = 'inputs';
+    let connType = 'bool';
+
+    if (selected && wireMode) {
+        let elc = elements[selected.id].connect;
+
+        if (!elc[elc.actDir][elc.actNum].connected) {
+            connect = true;
+            connType = elc[elc.actDir][elc.actNum].type;
+
+            if (elc.actDir === "inputs") connDir = 'outputs';
+        }
+    }
+
+    nodes.querySelectorAll('.node').forEach(n => {
         const sel = n.querySelector('rect');
         if (!sel) return;
-        sel.style.display = (selected && n.dataset.id === selected.id) ? 'block' : 'none';
+
+        if (!selected) {
+            sel.style.display = 'none';
+            return;
+        }
+
+        if (n.dataset.id === selected.id) {
+            sel.style.display = 'block';
+            sel.setAttribute('stroke','#BFCDE7')
+        } else {
+            if (connect) {
+                sel.style.display = 'block';
+                sel.setAttribute('stroke','#4CAF50')
+            } else {
+                sel.style.display = 'none';
+            }
+        }
     });
 }
 
@@ -215,3 +263,5 @@ addElement(new uiButton(), -200, -40);
 addElement(new uiLed(), -100, -40);
 
 saveGraph();
+
+toGraph();

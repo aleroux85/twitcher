@@ -2,8 +2,8 @@
     padding: var(--step-1);
     box-shadow: rgba(0, 0, 0, 0.4) 0px 4px 12px;
     margin-top: var(--step-1);
-    background-color: #2d2f34;
-    color: #bfcde7;
+    background-color: var(--clr-pane);
+    color: var(--clr-face);
 }
 
 .network-box h3 {
@@ -13,10 +13,10 @@
 .network-box .device-box {
     /* box-shadow: rgba(0, 0, 0, 0.4) 0px 4px 12px; */
     /* margin-top: var(--step-1); */
-    background-color: #2d2f34;
-    color: #bfcde7;
+    background-color: var(--clr-pane);
+    color: var(--clr-face);
     padding: var(--step-1);
-    border-top: 1px solid #bfcde7;
+    border-top: 1px solid var(--clr-face);
 }
 
 .network-box .device-elm {

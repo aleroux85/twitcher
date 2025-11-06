@@ -25,6 +25,17 @@ class uiComponents {
 class uiButton extends uiComponents {
     constructor() {
         super("button");
+        this.connect = {
+            inputs:[],
+            outputs:[
+                {
+                    type:"bool",
+                    connected:null
+                }
+            ],
+            actDir:"outputs",
+            actNum:0
+        };
     }
 
     buildUI(commandInterface) {
@@ -44,6 +55,18 @@ class uiButton extends uiComponents {
 class uiLed extends uiComponents {
     constructor() {
         super("led");
+        this.connect = {
+            inputs:[
+                {
+                    type:"bool",
+                    connected:null,
+                    active:true
+                }
+            ],
+            outputs:[],
+            actDir:"inputs",
+            actNum:0
+        };
     }
 
     buildUI(commandInterface) {}
