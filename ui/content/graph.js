@@ -9,6 +9,7 @@ setView();
 
 let elements = {}; // {id,type,x,y,r,label,value}
 let idCounter = 1;
+let idEdgeCounter = 1;
 let selected = null;
 let wireMode = false;
 
@@ -40,6 +41,7 @@ function createNode(id,obj) {
     g.setAttribute('transform', `translate(${obj.x} ${obj.y}) rotate(${obj.r || 0})`);
     g.dataset.id = id;
     g.dataset.type = obj.type;
+
     const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
     use.setAttribute('href', '#sym-' + obj.type);
     g.appendChild(use);
@@ -71,14 +73,64 @@ function createNode(id,obj) {
     return g;
 }
 
-function addElement(elm, x = 0, y = 0) {
-    const id = 'n' + (idCounter++);
-    elm.setCoords(x,y);
-    elm.setName(id);
+function createEdge(id1,id2) {
+    let el1 = elements[id1];
+    let el2 = elements[id2];
 
-    elements[id] = elm;
-    const node = createNode(id, elm);
-    return elm;
+    if (el1.actDir === "inputs") {
+        el1,el2 = el2,el1;
+    }
+
+    const dx = el2.x - el1.x;
+    const dy = el2.y - el1.y;
+    const r = Math.atan2(-dy,dx);
+    el1.setWireAngle(r);
+    el2.setWireAngle(r+Math.PI);
+    const [x1, y1] = el1.wireCoords();
+    const [x2, y2] = el2.wireCoords();
+
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.classList.add('edge');
+    g.dataset.id = 'e'+idEdgeCounter++;
+    g.dataset.type = 'wire';
+    // const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    // use.setAttribute('href', '#sym-wire');
+    // use.children[0].setAttribute('d', `M ${el1.x} ${el1.y} L ${el2.x} ${el2.y}`);
+    // g.appendChild(use);
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
+    path.setAttribute('stroke', '#BFCDE7');
+    path.setAttribute('stroke-width', 1.8);
+    g.appendChild(path);
+    // const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    // label.setAttribute('x', 0);
+    // label.setAttribute('y', 36);
+    // label.setAttribute('font-size', 10);
+    // label.setAttribute('text-anchor', 'middle');
+    // label.setAttribute('fill', '#9fbcd9');
+    // label.textContent = obj.name || '';
+    // g.appendChild(label);
+
+    // selection bubble
+    // const sel = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    // sel.setAttribute('x', -60);
+    // sel.setAttribute('y', -40);
+    // sel.setAttribute('width', 120);
+    // sel.setAttribute('height', 80);
+    // sel.setAttribute('rx', 10);
+    // sel.setAttribute('fill', 'none');
+    // sel.setAttribute('stroke', '#7cc4ff');
+    // sel.setAttribute('stroke-width', 0.8);
+    // sel.style.display = 'none';
+    // g.appendChild(sel);
+
+    // pointer interactions
+    // g.addEventListener('pointerdown', nodePointerDown);
+    nodes.insertBefore(g,nodes.children[0]);
+
+    el1.setWire(el2,g);
+    el2.setWire(el1,g);
+    return g;
 }
 
 // render nodes from elements
@@ -97,6 +149,10 @@ function selectById(id) {
     if (id === null) {
         selected = null;
     } else {
+        if (elements[id].marked) {
+            createEdge(selected.id, id);
+        }
+
         selected = elements[id];
         selected.id = id;
     }
@@ -110,7 +166,7 @@ function highlightSelection() {
     let connType = 'bool';
 
     if (selected && wireMode) {
-        let elc = elements[selected.id].connect;
+        let elc = elements[selected.id];
 
         if (!elc[elc.actDir][elc.actNum].connected) {
             connect = true;
@@ -120,42 +176,37 @@ function highlightSelection() {
         }
     }
 
-    nodes.querySelectorAll('.node').forEach(n => {
-        const sel = n.querySelector('rect');
-        if (!sel) return;
-
+    Object.entries(elements).forEach(([key,elm]) => {
         if (!selected) {
-            sel.style.display = 'none';
+            elm.highlight('hide');
             return;
         }
 
-        if (n.dataset.id === selected.id) {
-            sel.style.display = 'block';
-            sel.setAttribute('stroke','#BFCDE7')
+        if (key === selected.id) {
+            elm.highlight('select');
         } else {
             if (connect) {
-                sel.style.display = 'block';
-                sel.setAttribute('stroke','#4CAF50')
+                elm.highlight('mark');
             } else {
-                sel.style.display = 'none';
+                elm.highlight('hide');
             }
         }
     });
 }
 
-function updateNodeTransform() {
-    if (!selected) return;
-    const g = nodes.querySelector(`[data-id='${selected.id}']`);
-    if (g) g.setAttribute('transform', `translate(${selected.x} ${selected.y}) rotate(${selected.r || 0})`);
-}
+// function updateNodeTransform() {
+//     if (!selected) return;
+//     const g = nodes.querySelector(`[data-id='${selected.id}']`);
+//     if (g) g.setAttribute('transform', `translate(${selected.x} ${selected.y}) rotate(${selected.r || 0})`);
+// }
 
 // pointer drag for nodes
-let pointerState = {
-    dragging: false,
-    start: { x: 0, y: 0 },
-    node: null,
-    orig: { x: 0, y: 0 }
-};
+// let pointerState = {
+//     dragging: false,
+//     start: { x: 0, y: 0 },
+//     node: null,
+//     orig: { x: 0, y: 0 }
+// };
 
 function svgPoint(evt) {
     const pt = svg.createSVGPoint();
@@ -166,40 +217,40 @@ function svgPoint(evt) {
     return p;
 }
 
-function nodePointerDown(e) {
-    e.stopPropagation();
-    this.setPointerCapture(e.pointerId);
-    const id = this.dataset.id;
-    const el = elements[id];
-    selectById(id);
-    pointerState.dragging = true;
-    pointerState.node = el;
-    pointerState.start = svgPoint(e);
-    pointerState.orig = { x: el.x, y: el.y };
-    this.addEventListener('pointermove', nodePointerMove);
-    this.addEventListener('pointerup', nodePointerUp);
-}
+// function nodePointerDown(e) {
+//     e.stopPropagation();
+//     this.setPointerCapture(e.pointerId);
+//     const id = this.dataset.id;
+//     const el = elements[id];
+//     selectById(id);
+//     pointerState.dragging = true;
+//     pointerState.node = el;
+//     pointerState.start = svgPoint(e);
+//     pointerState.orig = { x: el.x, y: el.y };
+//     this.addEventListener('pointermove', nodePointerMove);
+//     this.addEventListener('pointerup', nodePointerUp);
+// }
 
-function nodePointerMove(e) {
-    if (!pointerState.dragging) return;
-    const p = svgPoint(e);
-    const dx = p.x - pointerState.start.x, dy = p.y - pointerState.start.y;
-    pointerState.node.x = pointerState.orig.x + dx;
-    pointerState.node.y = pointerState.orig.y + dy;
-    updateNodeTransform();
-    // updatePropsPanel();
-}
+// function nodePointerMove(e) {
+//     if (!pointerState.dragging) return;
+//     const p = svgPoint(e);
+//     const dx = p.x - pointerState.start.x, dy = p.y - pointerState.start.y;
+//     pointerState.node.x = pointerState.orig.x + dx;
+//     pointerState.node.y = pointerState.orig.y + dy;
+//     updateNodeTransform();
+//     // updatePropsPanel();
+// }
 
-function nodePointerUp(e) {
-    if (pointerState.node) {
-        const n = nodes.querySelector(`[data-id='${pointerState.node.id}']`);
-        try { n.removeEventListener('pointermove', nodePointerMove);
-            n.removeEventListener('pointerup', nodePointerUp);
-        } catch (e) { }
-    }
-    pointerState.dragging = false;
-    pointerState.node = null;
-}
+// function nodePointerUp(e) {
+//     if (pointerState.node) {
+//         const n = nodes.querySelector(`[data-id='${pointerState.node.id}']`);
+//         try { n.removeEventListener('pointermove', nodePointerMove);
+//             n.removeEventListener('pointerup', nodePointerUp);
+//         } catch (e) { }
+//     }
+//     pointerState.dragging = false;
+//     pointerState.node = null;
+// }
 
 // clicking blank deselects
 svg.addEventListener('pointerdown', function (e) {
@@ -259,9 +310,11 @@ svg.addEventListener('wheel', function (e) {
     setView();
 });
 
-addElement(new uiButton(), -200, -40);
-addElement(new uiLed(), -100, -40);
+new uiButton(-200, -40);
+new uiLed(100, 40);
 
-saveGraph();
+// saveGraph();
 
 toGraph();
+
+createEdge("n1","n2")
