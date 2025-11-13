@@ -60,6 +60,12 @@ make test
 
 This builds a standalone version for local testing.
 
+If you have a hot reload server you can use `entr` to update all file if you made an update and get that reloaded.
+
+```bash
+ls ui/content/*.* ui/content/components/* ui/layout.* | entr make test
+```
+
 ---
 
 ### Development Build (No Compression)
@@ -90,4 +96,6 @@ This project is open-source and available under the [MIT License](LICENSE).
 
 ## 😀 Credits
 
-- Icons used, [solar-line-duotone on svgrepo.com](https://www.svgrepo.com/collection/solar-line-duotone-icons)
+Icons used on [svgrepo.com](https://www.svgrepo.com)
+- [solar-line-duotone](https://www.svgrepo.com/collection/solar-line-duotone-icons)
+- [dazzle-line](https://www.svgrepo.com/collection/dazzle-line-icons)
