@@ -4,16 +4,17 @@ class uiComponents {
         this.x = x;
         this.y = y;
         this.r = 0;
-        this.id = 'n' + (idCounter++);
-        this.name = this.id;
+        this.id = idCounter++;
+        this.name = 'n' + this.id;
         this.label = type.toUpperCase();
+        this.labelId = 0;
         this.inputs = [];
         this.outputs = [];
         this.actDir = null;
         this.actNum = null;
         this.marked = false;
 
-        elements[this.id] = this;
+        elements[this.name] = this;
     }
 
     setCoords(x = 0, y = 0) {
