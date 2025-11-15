@@ -17,8 +17,6 @@ dev: ui/layout.html ui/dist/index.css ui/dist/index.js
 build: ui/layout.html ui/dist/index.css ui/dist/index.js
 	@mkdir -p ui/dist
 	$(call compose,ui/layout.html,make/html.map,ui/dist/index.html)
-	sed -i '/^[[:space:]]*const[[:space:]]\+testing[[:space:]]*=[[:space:]]*true;[[:space:]]*$/ { N; /^\n$/d; d }' ui/dist/index.html
-	sed -i 's/^[[:space:]]*if[[:space:]]*(\!testing)[[:space:]]*{[[:space:]]*\(.*\)[[:space:]]*}/\1/' file.js ui/dist/index.html
 	gzip -k -9 -f ui/dist/index.html
 	xxd -i ui/dist/index.html.gz > ui_dist_index_html_gz.h
 	cd build && cmake -DPICO_BOARD=pico2_w .. && $(MAKE)
@@ -32,6 +30,7 @@ ui/dist/index.css: ui/layout.css ui/content/network.css ui/content/command.css u
 ui/dist/index.js: ui/layout.js ui/content/network.js ui/content/command.js ui/content/graph.js ui/content/components.js
 	@mkdir -p ui/dist
 	$(call compose,ui/layout.js,make/js.map,ui/dist/index.js)
+	sed -i '/\/\/testing$$/d' ui/dist/index.js
 	@echo "Built test version → ui/dist/index.js"
 
 ui/content/components.js: $(wildcard ui/content/components/*.js)
@@ -43,3 +42,4 @@ flash:
 
 clean:
 	rm -rf ui/dist
+	rm ui/content/components.js

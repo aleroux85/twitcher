@@ -16,9 +16,24 @@ let wireMode = false;
 function saveGraph() {
     commandInterface = document.getElementById('command');
 
+    const output = [];
+
     Object.entries(elements).forEach(([key,elm]) => {
         elm.buildUI(commandInterface);
+        output.push(...elm.marshal());
     })
+
+    const binary = Uint8Array.from(output);
+    const wsConfigMsg = new Uint8Array(binary.length + 3);
+    wsConfigMsg[0] = 0x0A;
+    wsConfigMsg[1] = (binary.length >> 8) & 0xFF;
+    wsConfigMsg[2] = binary.length & 0xFF;
+    wsConfigMsg.set(binary, 3);
+
+    if (debug) {console.log(wsConfigMsg)} //testing
+    if (!testing) { //testing
+    socket.send(wsConfigMsg);
+    } //testing
 }
 
 function toggleConnectMode() {
@@ -216,41 +231,6 @@ function svgPoint(evt) {
     const p = pt.matrixTransform(ctm);
     return p;
 }
-
-// function nodePointerDown(e) {
-//     e.stopPropagation();
-//     this.setPointerCapture(e.pointerId);
-//     const id = this.dataset.id;
-//     const el = elements[id];
-//     selectById(id);
-//     pointerState.dragging = true;
-//     pointerState.node = el;
-//     pointerState.start = svgPoint(e);
-//     pointerState.orig = { x: el.x, y: el.y };
-//     this.addEventListener('pointermove', nodePointerMove);
-//     this.addEventListener('pointerup', nodePointerUp);
-// }
-
-// function nodePointerMove(e) {
-//     if (!pointerState.dragging) return;
-//     const p = svgPoint(e);
-//     const dx = p.x - pointerState.start.x, dy = p.y - pointerState.start.y;
-//     pointerState.node.x = pointerState.orig.x + dx;
-//     pointerState.node.y = pointerState.orig.y + dy;
-//     updateNodeTransform();
-//     // updatePropsPanel();
-// }
-
-// function nodePointerUp(e) {
-//     if (pointerState.node) {
-//         const n = nodes.querySelector(`[data-id='${pointerState.node.id}']`);
-//         try { n.removeEventListener('pointermove', nodePointerMove);
-//             n.removeEventListener('pointerup', nodePointerUp);
-//         } catch (e) { }
-//     }
-//     pointerState.dragging = false;
-//     pointerState.node = null;
-// }
 
 // clicking blank deselects
 svg.addEventListener('pointerdown', function (e) {

@@ -1,3 +1,4 @@
+let socket;
 let networks = {
     unknown:{
         name:"unknown",
@@ -72,12 +73,16 @@ function toggleWebSocket(n,d) {
         dv.connected = false;
         dv.switch.querySelector('svg>path').setAttribute("fill","#E7BFBF80");
         dv.switch.querySelector('svg>g').setAttribute("transform","translate(0 3) scale(0.745)");
-        if (!testing) {disconnectWebSocket(networks[n].devices[d]);}
+        if (!testing) { //testing
+        disconnectWebSocket(networks[n].devices[d]);
+        } //testing
     } else {
         dv.connected = true;
         dv.switch.querySelector('svg>path').setAttribute("fill","#4CAF5080");
         dv.switch.querySelector('svg>g').setAttribute("transform","translate(5.8 3) scale(0.745)");
-        if (!testing) {connectWebSocket(networks[n].devices[d]);}
+        if (!testing) {  //testing
+        connectWebSocket(networks[n].devices[d]);
+        }  //testing
     }
 }
 
@@ -103,11 +108,12 @@ function connectWebSocket(device) {
             const data = new Uint8Array(event.data);
             console.log("Received binary data:", data);
 
-            const config = unmarshalControls(data);
-            console.log(config);
+            // const config = unmarshalControls(data);
+            // console.log(config);
             // reconstructConfigInterface(config);
             // buildInterface(config);
         } else {
+            console.log("Received binary data:", event.data);
             // if (event.data.startsWith("core ")) {
             //     document.getElementById("core").innerText = event.data.substring(5) + "°C";
             // }
