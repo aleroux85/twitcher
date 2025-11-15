@@ -1,13 +1,45 @@
-# Configuration Reference
+# Protocol Reference
 
-## The Format
+This describes the protocol between the hardware device and the web interface
+once the websocket has been opened. It describes the format of the configuration
+that is setup on the interface and sent to the hardware. The hardware stores the
+config and uses it to setup its IOs. The hardware can the recieve commands that
+is the second part of this protocol and know how to handle the commands.
 
-Each control starts with two bytes specifying the type of the control and the length of the ID.
-The rest of the message contains the ID, the parameters and ends with a zero byte.
+When a websocket connection is opened the device will check for an existing
+configuration. If a configuration has already been stored on the device it will
+configure itself and send the configuration to the web interface where it is
+restored as well.
 
-|-type1-|-type2-|-ID-|-parameters-|0x00|
+## The Configuration Format
 
-## Types
+The payload of the configuration message always start with 0x0A (the message type).
+It is then followed by two bytes indicating the length of the message. The length
+includes the type and 2 lenght bytes.
+
++---------+------------------------+-----------------------------+
+|  Byte   |        Field           |       Description           |
++---------+------------------------+-----------------------------+
+|   0     | Message Type           | 1 byte                      |
+| 1 – 2   | Length (LE: LSB→MSB)   | 2 bytes = payload size      |
+|   3..   | Payload                | Length bytes                |
++---------+------------------------+-----------------------------+
+
+### Configuration Elements
+
+The message payload consists of a sequential list of configuration elements. Each element begins with a 1-byte Element Type field indicating how the element should be interpreted, followed by a 1-byte Reserved field currently unused. This is followed by a 2-byte Element ID (endianness defined by the protocol), which uniquely identifies the element. Next is a 1-byte Element Length that specifies the size of the element’s payload in bytes. The remainder of the element consists of the Element Payload, whose structure and meaning depend on the Element Type. Elements are packed back-to-back in the message payload with no padding.
+
++---------+------------------------+---------------------------------------------+
+|  Byte   |        Field           |                 Description                 |
++---------+------------------------+---------------------------------------------+
+|   0     | Element Type           | 1 byte — defines how payload is interpreted |
+|   1     | Reserved               | 1 byte — currently unused                   |
+| 2 – 3   | Element ID             | 2 bytes — unique identifier (LE or BE)      |
+|   4     | Element Length         | 1 byte — size of Element Payload in bytes   |
+| 5..N    | Element Payload        | Variable — depends on Element Type          |
++---------+------------------------+---------------------------------------------+
+
+### Element Types
 
 0x01: UI input button
 0x02: UI input switch
