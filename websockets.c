@@ -207,7 +207,7 @@ err_t handle_websocket_req(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_
     if (config[0] == 10) {
         printf("config exist, sending to client\n");
         send_websocket_binary(clientstate, config+3, config_length);
-        print_buf(config+3,config_length);
+        print_buf(config,config_length+3);
     }
 
     return ERR_OK;

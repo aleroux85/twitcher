@@ -20,6 +20,41 @@ function toSettings() {
     bcSelect.className = "settings";
 }
 
+function reactive(obj, onChange) {
+    return new Proxy(obj, {
+        get(target, prop, receiver) {
+            const value = Reflect.get(target, prop, receiver);
+
+            if (ArrayBuffer.isView(value) && !(value instanceof DataView)) {
+                return value;
+            }
+            
+            if (typeof value === 'object' && value !== null)
+                return reactive(value, onChange);
+            return value;
+        },
+        set(target, prop, value, receiver) {
+            const result = Reflect.set(target, prop, value, receiver);
+            onChange();
+            return result;
+        },
+        deleteProperty(target, prop) {
+            const result = Reflect.deleteProperty(target, prop);
+            onChange();
+            return result;
+        }
+    });
+}
+
+function mount(root, state, template) {
+    function render() {
+        root.innerHTML = template(state);
+    }
+    const r = reactive(state, render);
+    render();
+    return r;
+}
+
 /* {{network-js}} */
 
 /* {{command-js}} */

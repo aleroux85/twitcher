@@ -9,6 +9,7 @@
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
 #include "wifi.h"
+#include "config.h"
 
 // Connection retry parameters
 #define MAX_RETRIES 5
@@ -47,17 +48,34 @@ void print_wifi_status(int status_code) {
     }
 }
 
-void create_wifi_access_point() {
+void create_wifi_access_point(const network_config nc) {
 
-    printf("Starting AP...\n");
-    const char *ssid = "PicoHotspot";
-    const char *password = "pico1234";
+    printf("\nStarting access point...\n");
+    // const char *ssid = "neoGraph-";
+    // char ssid[16]; 
+    // snprintf(ssid, sizeof(ssid), "neoGraph-%s", name);
+    // const char *password = "neoGraph";
 
-    cyw43_arch_enable_ap_mode(ssid, password, CYW43_AUTH_WPA2_AES_PSK);
+    cyw43_arch_enable_ap_mode(nc.ssid, nc.pass, CYW43_AUTH_WPA2_AES_PSK);
 
-    printf("AP started with SSID: %s\n", ssid);
-    
+    printf("Access point started with SSID: %s\n", nc.ssid);
+}
 
+void create_network(const uint8_t *mac) {
+    network_setup ns;
+    retrieve_networking_config(mac, &ns);
+
+    printf("\nMAC address: ");
+    for (int i = 0; i < 6; i++) {
+        printf("%02X", mac[i]);
+        if (i < 5) printf(":");
+    }
+    printf("\nDevice name: %s\n",ns.device.name);
+    printf("Network name: %s\n",ns.network.name);
+    printf("Network ssid: %s\n",ns.network.ssid);
+
+    // char name[] = "ABCD";
+    create_wifi_access_point(ns.network);
 }
 
 int connect_to_wifi(const char* static_ip, const char* static_netmask, const char* static_gateway) {

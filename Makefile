@@ -14,8 +14,9 @@ dev: ui/layout.html ui/dist/index.css ui/dist/index.js
 	cd build && cmake -DPICO_BOARD=pico2_w .. && $(MAKE)
 	@echo "Built test version → ui/dist/index.html"
 
-build: ui/layout.html ui/dist/index.css ui/dist/index.js
+build: ui/layout.html ui/dist/index.css ui/dist/index.js $(wildcard *.c) $(wildcard *.h)
 	@mkdir -p ui/dist
+	sed -i '/\/\/testing$$/d' ui/dist/index.js
 	$(call compose,ui/layout.html,make/html.map,ui/dist/index.html)
 	gzip -k -9 -f ui/dist/index.html
 	xxd -i ui/dist/index.html.gz > ui_dist_index_html_gz.h
@@ -30,7 +31,7 @@ ui/dist/index.css: ui/layout.css ui/content/network.css ui/content/command.css u
 ui/dist/index.js: ui/layout.js ui/content/network.js ui/content/command.js ui/content/graph.js ui/content/components.js
 	@mkdir -p ui/dist
 	$(call compose,ui/layout.js,make/js.map,ui/dist/index.js)
-	sed -i '/\/\/testing$$/d' ui/dist/index.js
+# 	sed -i '/\/\/testing$$/d' ui/dist/index.js
 	@echo "Built test version → ui/dist/index.js"
 
 ui/content/components.js: $(wildcard ui/content/components/*.js)

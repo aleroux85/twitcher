@@ -1,6 +1,27 @@
 #ifndef CONFIG_H_INCLUDED
 #define CONFIG_H_INCLUDED
 
+static const char ALPHABET[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+static const char LETTERS[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+typedef struct {
+    uint16_t id;
+    char name[32];
+    uint16_t network;
+} device_config;
+
+typedef struct {
+    uint16_t id;
+    char name[32];
+    char ssid[32];
+    char pass[32];
+} network_config;
+
+typedef struct {
+    device_config device;
+    network_config network;
+} network_setup;
+
 typedef enum {
     CONFIG_OPERATION_CONTROL_ACTION = 1,
     CONFIG_OPERATION_TYPE_SETUP = 2,
@@ -32,7 +53,7 @@ typedef struct {
 //     size_t count;
 // } ControlList;
 
-// ControlList* unmarshal_controls(const uint8_t* data, size_t length);
+void retrieve_networking_config(const uint8_t *mac, network_setup *out);
 void unmarshal_controls(const uint8_t* data, size_t length);
 void apply_store(const uint8_t* data, size_t length);
 uint16_t retrieve_store(uint8_t* data_buffer);
