@@ -206,8 +206,8 @@ err_t handle_websocket_req(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_
     // snprintf(config_msg,config_length+7,"config:")
     if (config[0] == 10) {
         printf("config exist, sending to client\n");
-        send_websocket_binary(clientstate, config+3, config_length);
-        print_buf(config,config_length+3);
+        send_websocket_binary(clientstate, config, config_length+3);
+        // print_buf(config,config_length+3);
     }
 
     return ERR_OK;
@@ -259,6 +259,8 @@ err_t handle_websocket_msg(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_
 
         if (*payload == 0x0A) {
             apply_store(payload,data_length);
+        } else if (*payload == 0x0B) {
+            update_store(payload+3,data_length);
         } else if (*payload == 0x01) {
             uint32_t value = *(payload+3) << 24
                 | *(payload+4) << 16

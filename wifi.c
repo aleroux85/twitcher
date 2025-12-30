@@ -61,7 +61,7 @@ void create_wifi_access_point(const network_config nc) {
     printf("Access point started with SSID: %s\n", nc.ssid);
 }
 
-void create_network(const uint8_t *mac) {
+int create_network(const uint8_t *mac) {
     network_setup ns;
     retrieve_networking_config(mac, &ns);
 
@@ -73,16 +73,28 @@ void create_network(const uint8_t *mac) {
     printf("\nDevice name: %s\n",ns.device.name);
     printf("Network name: %s\n",ns.network.name);
     printf("Network ssid: %s\n",ns.network.ssid);
+    printf("Network opts: %d\n",ns.network.opts);
 
     // char name[] = "ABCD";
+    if ((ns.network.opts&1) == 0) {
+        printf("Create network access point\n");
     create_wifi_access_point(ns.network);
+    } else {
+        printf("Connect to WiFi\n");
+        return connect_to_wifi(ns.network);
+    }
+    return 0;
 }
 
-int connect_to_wifi(const char* static_ip, const char* static_netmask, const char* static_gateway) {
+int connect_to_wifi(const network_config nw) {
+    const char* static_ip = NULL;
+    const char* static_netmask = NULL;
+    const char* static_gateway = NULL;
+
     cyw43_arch_enable_sta_mode();
 
-    printf("Connecting to WiFi, SSID: %s\n", WIFI_SSID);
-    int result = cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 10000);
+    printf("Connecting to WiFi, SSID: %s\n", nw.ssid);
+    int result = cyw43_arch_wifi_connect_timeout_ms(nw.ssid, nw.pass, CYW43_AUTH_WPA2_AES_PSK, 10000);
     print_wifi_status(result);
 
     int retries = 0;
@@ -91,7 +103,7 @@ int connect_to_wifi(const char* static_ip, const char* static_netmask, const cha
         sleep_ms(RETRY_DELAY_MS);
 
         printf("Retrying connection (attempt %d of %d)...\n", retries + 1, MAX_RETRIES);
-        result = cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 10000);
+        result = cyw43_arch_wifi_connect_timeout_ms(nw.ssid, nw.pass, CYW43_AUTH_WPA2_AES_PSK, 10000);
         
         retries++;
     }
@@ -186,7 +198,6 @@ int connect_to_wifi(const char* static_ip, const char* static_netmask, const cha
             }
         }
     }
-    
     
     return 0;
 }

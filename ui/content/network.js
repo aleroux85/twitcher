@@ -1,6 +1,36 @@
 let socket;
 
 function networkingTemplate(state) {
+    const editableField = (obj, field, label, nindex=-1, dindex=-1) => {
+        const value = obj[field];
+        const editing = obj._editing === field;
+
+        if (!editing) {
+            return `
+            <div class="editable">
+                <span class="label">${label}:</span>
+                <span class="value">${value}</span>
+                <svg onclick="networks[${nindex}]._editing='${field}';networks[${nindex}]._keep='${value}'" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="#BFCDE7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15.4998 5.49994L18.3282 8.32837M3 20.9997L3.04745 20.6675C3.21536 19.4922 3.29932 18.9045 3.49029 18.3558C3.65975 17.8689 3.89124 17.4059 4.17906 16.9783C4.50341 16.4963 4.92319 16.0765 5.76274 15.237L17.4107 3.58896C18.1918 2.80791 19.4581 2.80791 20.2392 3.58896C21.0202 4.37001 21.0202 5.63634 20.2392 6.41739L8.37744 18.2791C7.61579 19.0408 7.23497 19.4216 6.8012 19.7244C6.41618 19.9932 6.00093 20.2159 5.56398 20.3879C5.07171 20.5817 4.54375 20.6882 3.48793 20.9012L3 20.9997Z"/>
+                </svg>
+            </div>
+            `;
+        } else {
+            return `
+            <div class="editable">
+                <span class="label">${label}:</span>
+                <input oninput="networks[${nindex}]['${field}']=this.value" value="${value}" type="text" autofocus />
+                <svg onclick="networks[${nindex}]._editing=''" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="#BFCDE7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 12.6111L8.92308 17.5L20 6.5"/>
+                </svg>
+                <svg onclick="networks[${nindex}]._editing='';networks[${nindex}]['${field}']=networks[${nindex}]._keep" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="#BFCDE7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 6L18 18M18 6L6 18"/>
+                </svg>
+            </div>
+            `;
+        }
+    }
+
     const deviceElement = (nindex,dindex,device) => `
         <div class="device-elm">
             <div>
@@ -20,7 +50,26 @@ function networkingTemplate(state) {
     
     const networkElement = (nindex,network) => `
         <div class="network-box">
-            <h3>Network: ${network.name}</h3>
+            <div class="network-attributes">
+                <div>
+                    <h3>Network</h3>
+                    ${editableField(network,"name","Name",nindex)}
+                    ${editableField(network,"ssid","SSID",nindex)}
+                    ${editableField(network,"password","Password",nindex)}
+                </div>
+                <div class="netconn-buttons">
+                    <div class="${network.options===0?"sel":"nosel"}" onclick="networks[${nindex}].options=networks[${nindex}].options&254;updateNetworkOptions(${nindex})">
+                        <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke="#BFCDE7C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 15V9M7.41604 11.0005C7.14845 10.388 7 9.71159 7 9.00049C7 7.87466 7.37209 6.83574 8 6M16.584 11.0005C16.8516 10.388 17 9.71159 17 9.00049C17 7.87466 16.6279 6.83574 16 6M18.7083 3C20.1334 4.59227 21 6.69494 21 9C21 9.68739 20.9229 10.3568 20.777 11M5.29168 3C3.86656 4.59227 3 6.69494 3 9C3 9.68739 3.07706 10.3568 3.22302 11M6 18H6.01M9 18H9.01M12 18H12.01M18 15.0001C18.9319 15.0001 19.3978 15 19.7654 15.1522C20.2554 15.3552 20.6448 15.7446 20.8478 16.2346C21 16.6022 21 17.0681 21 18C21 18.9319 21 19.3978 20.8478 19.7654C20.6448 20.2554 20.2554 20.6448 19.7654 20.8478C19.3978 21 18.9319 21 18 21H6C5.06812 21 4.60218 21 4.23463 20.8478C3.74458 20.6448 3.35523 20.2554 3.15224 19.7654C3 19.3978 3 18.9319 3 18C3 17.0681 3 16.6022 3.15224 16.2346C3.35523 15.7446 3.74458 15.3552 4.23463 15.1522C4.59855 15.0015 5.05894 15 5.97256 15C9.98171 15 13.9909 15 18 15.0001Z"/>
+                        </svg>
+                    </div>
+                    <div class="${network.options===1?"sel":"nosel"}" onclick="networks[${nindex}].options=networks[${nindex}].options|1;updateNetworkOptions(${nindex})">
+                        <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path transform="rotate(180) translate(-24 -24)" stroke="#BFCDE7C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 21H6.2C5.0799 21 4.51984 21 4.09202 20.782C3.71569 20.5903 3.40973 20.2843 3.21799 19.908C3 19.4802 3 18.9201 3 17.8V6.2C3 5.0799 3 4.51984 3.21799 4.09202C3.40973 3.71569 3.71569 3.40973 4.09202 3.21799C4.51984 3 5.0799 3 6.2 3H11.8C12.9201 3 13.4802 3 13.908 3.21799C14.2843 3.40973 14.5903 3.71569 14.782 4.09202C15 4.51984 15 5.0799 15 6.2V10M21 21H21.01M8 6H10M17 21C17 18.7909 18.7909 17 21 17M13 21C13 16.5817 16.5817 13 21 13"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
             <div class="device-box">
                 ${network.devices.map((device,dindex) => deviceElement(nindex,dindex,device))}
             </div>
@@ -28,35 +77,17 @@ function networkingTemplate(state) {
     `;
 
     return `${state.map((network,nindex) => networkElement(nindex,network)).join("")}`;
-
-    // networks.forEach((network) => {
-    //     html += `
-    //         <div class="network-box">
-    //             <h3>Network: ${network.name}</h3>
-    //             <p><b>MAC:</b> ${
-    //                 Array.from(dev.mac)
-    //                     .map(b => b.toString(16).padStart(2,'0'))
-    //                     .join(':')
-    //             }</p>
-    //             <p><b>IP:</b> ${dev.ip}</p>
-    //             <p><b>Status:</b> ${dev.connected ? "🟢 Connected" : "🔴 Disconnected"}</p>
-
-    //             <button onclick="app.unknown.devices['${id}'].connected = 
-    //                 !app.unknown.devices['${id}'].connected">
-    //                 Toggle Connected
-    //             </button>
-    //         </div>
-    //     `;
-
-
 }
 
 const networks = mount(document.getElementById("network"), [
     {
         name:"unknown",
+        ssid:"unknown",
+        password:"••••••••",
+        options:0,
         devices:[
             {
-                name:"neoGraph",
+                name:"unknown",
                 mac:new Uint8Array([0x64, 0x00, 0x84, 0xfe, 0x18, 0x07]),
                 ip:location.host,
                 connected:false,
@@ -65,6 +96,15 @@ const networks = mount(document.getElementById("network"), [
         ]
     }
 ], networkingTemplate);
+
+function updateNetworkOptions(netID) {
+    const data = new Uint8Array([0x0B, 0, 7, 0xB2, 0, (netID >> 8) & 0xFF, netID & 0xFF, 2, 0, networks[netID].options]);
+    if (!testing) {  //testing
+    socket.send(data);
+    } else { //testing
+        console.log(data); //testing
+    } //testing
+}
 
 function toggleWebSocket(n,d) {
     const dv = networks[n].devices[d];
@@ -81,7 +121,7 @@ function toggleWebSocket(n,d) {
             const data = new Uint8Array([ //testing
                 0xb0, 0x00, 0x00, 0x00, 0x07, 0x00, 0x64, 0x00, 0x84, 0xfe, 0x18, 0x07, 0xb1, 0x00, 0x00, 0x00, //testing
                 0x06, 0x01, 0x49, 0x4a, 0x54, 0x54, 0x00, 0xb1, 0x00, 0x00, 0x00, 0x03, 0x02, 0x00, 0x00, 0xb2, //testing
-                0x00, 0x00, 0x00, 0x00, 0xb3, 0x00, 0x00, 0x00, 0x06, 0x01, 0x49, 0x4a, 0x54, 0x54, 0x00, 0xb3, //testing
+                0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xb3, 0x00, 0x00, 0x00, 0x06, 0x01, 0x49, 0x4a, 0x54, 0x54, 0x00, 0xb3, //testing
                 0x00, 0x00, 0x00, 0x0f, 0x02, 0x6e, 0x65, 0x6f, 0x47, 0x72, 0x61, 0x70, 0x68, 0x2d, 0x49, 0x4a, //testing
                 0x54, 0x54, 0x00]); //testing
             unmarshalConfigs(data); //testing
@@ -112,9 +152,82 @@ function unmarshalConfigs(binary) {
     }
 
     for (const device of configs[0xB0]) {
-        let mac = networks[0].devices[0].mac;
+        const mac = networks[0].devices[0].mac;
+        let netId = -1;
+
         if (areByteArraysEqual(device.pay.slice(1), mac)) {
-            networks[0].devices[0].name = "test";
+            const devId = device.id;
+
+            let iElm = 0;
+            while (iElm < configs[0xB1].length) {
+                const devParam = configs[0xB1][iElm];
+                if (devParam.id !== devId) {
+                    iElm++;
+                    continue;
+                }
+
+                const field = devParam.pay[0];
+                switch (field) {
+                    case 0x01:
+                        networks[0].devices[0].name = decoder.decode(devParam.pay.slice(1));
+                        break;
+                
+                    case 0x02:
+                        netId = devParam.pay[1] << 8 || devParam.pay[2];
+                        break;
+                
+                    default:
+                        break;
+                }
+
+                configs[0xB1].splice(iElm,1);
+            }
+
+            iElm = 0;
+            while (iElm < configs[0xB2].length) {
+                const netParam = configs[0xB2][iElm];
+                if (netParam.id !== netId) {
+                    iElm++;
+                    continue;
+                }
+
+                const field = netParam.pay[0];
+                switch (field) {
+                    case 0x00:
+                        networks[0].options = netParam.pay[1];
+                        break;
+                
+                    default:
+                        break;
+                }
+
+                configs[0xB2].splice(iElm,1);
+            }
+
+            iElm = 0;
+            while (iElm < configs[0xB3].length) {
+                const netParam = configs[0xB3][iElm];
+                if (netParam.id !== netId) {
+                    iElm++;
+                    continue;
+                }
+
+                const field = netParam.pay[0];
+                switch (field) {
+                    case 0x01:
+                        networks[0].name = decoder.decode(netParam.pay.slice(1));
+                        break;
+                
+                    case 0x02:
+                        networks[0].ssid = decoder.decode(netParam.pay.slice(1));
+                        break;
+                
+                    default:
+                        break;
+                }
+
+                configs[0xB3].splice(iElm,1);
+            }
         }
     }
 }
@@ -124,7 +237,7 @@ function areByteArraysEqual(arr1, arr2) {
 }
 
 function connectWebSocket(device) {
-    const socket = device.socket;
+    // const socket = device.socket;
 
     if (socket && socket.readyState === WebSocket.OPEN) {
         console.log("WebSocket already connected.");
@@ -145,12 +258,15 @@ function connectWebSocket(device) {
             const data = new Uint8Array(event.data);
             console.log("Received binary data:", data);
 
-            // const config = unmarshalControls(data);
-            // console.log(config);
-            // reconstructConfigInterface(config);
-            // buildInterface(config);
+            if (data[0] === 0x0A) {
+                unmarshalConfigs(data.slice(3));
+                // console.log(config);
+                // reconstructConfigInterface(config);
+                // buildInterface(config);
+            }
+
         } else {
-            console.log("Received binary data:", event.data);
+            console.log("Received text data:", event.data);
             // if (event.data.startsWith("core ")) {
             //     document.getElementById("core").innerText = event.data.substring(5) + "°C";
             // }
@@ -182,7 +298,7 @@ function connectWebSocket(device) {
 }
 
 function disconnectWebSocket(device) {
-    const socket = device.socket;
+    // const socket = device.socket;
 
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.close();

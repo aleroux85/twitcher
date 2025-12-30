@@ -1,11 +1,17 @@
 include make/tpl.mk
 
-test: ui/layout.html ui/dist/index.css ui/dist/index.js
+test: src/config/config_iterator.c tests/test_config_iterator.c tests/unity.c
+	gcc -std=c11 -Wall -Wextra -Werror -DUNIT_TEST -Isrc -Itests $^ -o test_runner
+
+run: test
+	./test_runner
+
+uidev: ui/layout.html ui/dist/index.css ui/dist/index.js
 	@mkdir -p ui/dist
 	$(call compose,ui/layout.html,make/html.map,ui/dist/index.html)
 	@echo "Built test version → ui/dist/index.html"
 
-dev: ui/layout.html ui/dist/index.css ui/dist/index.js
+hwdev: ui/layout.html ui/dist/index.css ui/dist/index.js
 	@mkdir -p ui/dist
 	sed -i 's/^const testing = true;/const testing = false;/' ui/dist/index.js
 	$(call compose,ui/layout.html,make/html.map,ui/dist/index.html)
@@ -44,3 +50,4 @@ flash:
 clean:
 	rm -rf ui/dist
 	rm ui/content/components.js
+	rm -f test_runner

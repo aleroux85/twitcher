@@ -12,6 +12,7 @@ typedef struct {
 
 typedef struct {
     uint16_t id;
+    uint8_t opts;
     char name[32];
     char ssid[32];
     char pass[32];
@@ -48,6 +49,16 @@ typedef struct {
     };
 } Control;
 
+typedef struct {
+    const uint8_t *buf;
+    uint8_t *pay;
+    size_t pos;
+    size_t size;
+    uint8_t type;
+    uint16_t id;
+    uint8_t len;
+} config_element_iterator;
+
 // typedef struct {
 //     Control* controls;
 //     size_t count;
@@ -56,6 +67,7 @@ typedef struct {
 void retrieve_networking_config(const uint8_t *mac, network_setup *out);
 void unmarshal_controls(const uint8_t* data, size_t length);
 void apply_store(const uint8_t* data, size_t length);
+void update_store(const uint8_t* data, size_t length);
 uint16_t retrieve_store(uint8_t* data_buffer);
 
 #endif

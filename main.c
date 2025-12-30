@@ -44,15 +44,14 @@ int main() {
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
     printf("\nStarting networking\n");
     uint8_t *mac = netif_list->hwaddr;
-    create_network(mac);
+    int err = create_network(mac);
     // create_wifi_access_point(name);
     // int err = connect_to_wifi(NULL,NULL,NULL);
     // int err = connect_to_wifi("192.168.43.158","255.255.255.0","192.168.43.1");
-    // if (err != 0) {
-    //     printf("here\n");
-    //     cyw43_arch_deinit();
-    //     return 1;
-    // }
+    if (err != 0) {
+        cyw43_arch_deinit();
+        return 1;
+    }
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
     
     printf("\n(core0) launching core1\n");

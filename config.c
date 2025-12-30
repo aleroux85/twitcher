@@ -31,45 +31,6 @@ void read_config(uint8_t* buffer, size_t len) {
     memcpy(buffer, flash_target_contents, len);
 }
 
-void apply_store(const uint8_t* data, size_t length) {
-    printf("storing config to rom\n");
-    uint32_t ints = save_and_disable_interrupts();
-
-    flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SIZE);
-    flash_range_program(FLASH_TARGET_OFFSET, data, length+3);
-    restore_interrupts(ints);
-    printf("unmarshalling config\n");
-    unmarshal_controls(data+3,length);
-}
-
-void write_secrets(const uint8_t* data, size_t length) {
-    printf("storing config to rom\n");
-    uint32_t ints = save_and_disable_interrupts();
-
-    flash_range_erase(SECURE_FLASH_TARGET_OFFSET, SECURE_FLASH_SIZE);
-    flash_range_program(SECURE_FLASH_TARGET_OFFSET, data, length);
-    restore_interrupts(ints);
-}
-
-void write_config(const uint8_t* data, size_t length) {
-    printf("storing config to rom\n");
-    uint32_t ints = save_and_disable_interrupts();
-
-    flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SIZE);
-    flash_range_program(FLASH_TARGET_OFFSET, data, length);
-    restore_interrupts(ints);
-}
-
-typedef struct {
-    uint8_t *buf;
-    uint8_t *pay;
-    size_t pos;
-    size_t size;
-    uint8_t type;
-    uint16_t id;
-    uint8_t len;
-} config_element_iterator;
-
 bool next_config_element(config_element_iterator *elms) {
     if (elms->pos >= elms->size) return false;
 
@@ -89,8 +50,80 @@ bool next_config_element(config_element_iterator *elms) {
     elms->id = elms->buf[elms->pos+2]<<8 | elms->buf[elms->pos+3];
     elms->len = elms->buf[elms->pos+4];
     elms->pay = elms->buf+elms->pos+5;
+    // memcpy(elms->pay, elms->buf+elms->pos+5, elms->len);
 
     printf("debug pos:%d, size:%d, type:%X, id:%d, len:%d\n",elms->pos,elms->size,elms->type,elms->id,elms->len);
+}
+
+void apply_store(const uint8_t* data, size_t length) {
+    printf("storing config to rom\n");
+    uint32_t ints = save_and_disable_interrupts();
+
+    flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SIZE);
+    flash_range_program(FLASH_TARGET_OFFSET, data, length+3);
+    restore_interrupts(ints);
+    printf("unmarshalling config\n");
+    unmarshal_controls(data+3,length);
+}
+
+void update_store(const uint8_t* data, size_t length) {
+    printf("updating config in rom\n");
+    uint32_t ints = save_and_disable_interrupts();
+
+    uint8_t header_buffer[3];
+    read_config(header_buffer,3);
+    uint16_t data_length = (header_buffer[1] << 8) | header_buffer[2];
+    uint8_t config_buffer[FLASH_SIZE];
+    read_config(config_buffer,data_length+3);
+
+    config_element_iterator upd_itr = {
+        .buf = data,
+        .pay = NULL,
+        .pos = 0,
+        .size = length
+    };
+
+    config_element_iterator itr = {
+        .buf = config_buffer+3,
+        .pay = NULL,
+        .pos = 0,
+        .size = data_length
+    };
+
+    while (next_config_element(&itr)) {
+        if (itr.type == upd_itr.type) {
+            printf("got B2\n");
+            if (itr.id != upd_itr.id) continue;
+
+            if (itr.pay[0] == upd_itr.pay[0]) {
+                printf("match network opts\n");
+                flash_range_program(FLASH_TARGET_OFFSET+upd_itr.pos-(upd_itr.len-1), upd_itr.pay+1, upd_itr.len-1);
+                printf("debug opts:%d\n", upd_itr.pay);
+                break;
+            }
+        }
+    }
+
+    restore_interrupts(ints);
+    printf("done updating config\n");
+}
+
+void write_secrets(const uint8_t* data, size_t length) {
+    printf("storing config to rom\n");
+    uint32_t ints = save_and_disable_interrupts();
+
+    flash_range_erase(SECURE_FLASH_TARGET_OFFSET, SECURE_FLASH_SIZE);
+    flash_range_program(SECURE_FLASH_TARGET_OFFSET, data, length);
+    restore_interrupts(ints);
+}
+
+void write_config(const uint8_t* data, size_t length) {
+    printf("storing config to rom\n");
+    uint32_t ints = save_and_disable_interrupts();
+
+    flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SIZE);
+    flash_range_program(FLASH_TARGET_OFFSET, data, length);
+    restore_interrupts(ints);
 }
 
 void mac_to_name(const uint8_t mac[6], char out[5]) {
@@ -172,7 +205,9 @@ size_t build_config(uint8_t *buf, const char name[5], const uint8_t *mac) {
     *p++ = 0x00; // reserved
     *p++ = 0x00; // elm ID H
     *p++ = 0x00; // elm ID L
-    *p++ = 0x00; // elm Len
+    *p++ = 0x02; // elm Len
+    *p++ = 0x00; // field 0x00=options
+    *p++ = 0x01; // options
 
     // --- 0xB3 block #1 ---
     *p++ = 0xB3;
@@ -276,6 +311,24 @@ int unmarshal_network_config(
             if (field_number == 0x02) {
                 // printf("match device network\n");
                 out->network.id = itr.pay[1]<<8 | itr.pay[2];
+                continue;
+            }
+        }
+    }
+
+    itr.pos = 0;
+    itr.pay = NULL;
+
+    while (next_config_element(&itr)) {
+        if (itr.type == 0xB2) {
+            printf("got B2\n");
+            if (itr.id != out->network.id) continue;
+            uint8_t field_number = itr.pay[0];
+
+            if (field_number == 0x00) {
+                printf("match network opts\n");
+                out->network.opts = itr.pay[1];
+                printf("debug opts:%d\n", out->network.opts);
                 continue;
             }
         }

@@ -17,7 +17,7 @@
     height: var(--step-5);
     border: 3px solid var(--clr-face);
     border-radius: 100%;
-    padding: var(--step--4);
+    padding: var(--step--3);
     cursor: pointer;
     margin-left: var(--step-0);
 }
