@@ -35,7 +35,9 @@ function reactive(obj, onChange) {
         },
         set(target, prop, value, receiver) {
             const result = Reflect.set(target, prop, value, receiver);
-            onChange();
+            if (prop !== "_draft") {
+                onChange();
+            }
             return result;
         },
         deleteProperty(target, prop) {
@@ -47,9 +49,21 @@ function reactive(obj, onChange) {
 }
 
 function mount(root, state, template) {
+    function bindEditableInputs() {
+        document.querySelectorAll("input[id^='input-']").forEach(input => {
+            input.oninput = e => {
+                const [ , nindex, field ] = input.id.split("-");
+                networks[nindex]._draft = e.target.value;
+            };
+            input.focus();
+        });
+    }
+
     function render() {
         root.innerHTML = template(state);
+        bindEditableInputs();
     }
+    
     const r = reactive(state, render);
     render();
     return r;

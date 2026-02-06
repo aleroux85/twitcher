@@ -55,7 +55,8 @@ static bool cei_next(config_element_iterator *it)
         return false;
 
     const uint8_t *p = &it->buf[it->pos];
-
+    
+    // printf("here has next %02X %02X %02X %02X\n",p[0],p[1],p[2],p[3]);
     it->type = p[0];
 
     // /* Element ID (example: big-endian) */

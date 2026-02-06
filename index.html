@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Example</title>
+    <style>
+        body,html {
+            font-family: sans-serif;
+            background-color: #20202b;
+            color: #BFCDE7;
+            overflow-x: hidden;
+            font-size: 16px;
+            overscroll-behavior: none;
+            touch-action: none;
+            margin: 0;
+            height: 100%;
+        }
+
+        input,button,select {
+            background: none;
+            border: none;
+            color: #BFCDE7;
+            font-size: 1.5em;
+            cursor: pointer;
+        }
+
+        .frm-grp {
+            display: grid;
+            grid-template-columns: max-content auto;
+            grid-template-rows:auto;
+            row-gap: 0.35em;
+            column-gap: 0.35em;
+        }
+        
+        .frm-grp > label {
+            align-self: center;
+            justify-self: end;
+        }
+
+        /* nav */
+        div.nav {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            padding-bottom: 0;
+        }
+
+        h3 {
+            font-size: 1.3em;
+            margin: 0;
+            margin-bottom: 0.35em;
+        }
+
+        .nav>div>p {
+            margin: 0;
+        }
+
+        .nav>div>p>span {
+            margin-left: 0.35em;
+        }
+
+        #status.connected {
+            color: #BFE7C0;
+        }
+
+        #status.disconnected {
+            color: #E7BFBF;
+        }
+
+        #uptime {
+            color: #BFE7C0;
+        }
+
+        #core {
+            color: #BFE7C0;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 3.7em;
+            height: 2.2em;
+            margin-bottom: 0.59em;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .control-button {
+            cursor: pointer;
+        }
+
+        .switch-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #E7BFBF;
+            transition: .4s;
+            border-radius: 2.2em;
+        }
+
+        .switch-slider:before {
+            position: absolute;
+            content: "";
+            height: 1.7em;
+            width: 1.7em;
+            left: 0.25em;
+            bottom: 0.25em;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: rgba(0, 0, 0, 0.25) 0px 54px 55px, rgba(0, 0, 0, 0.12) 0px -12px 30px, rgba(0, 0, 0, 0.12) 0px 4px 6px, rgba(0, 0, 0, 0.17) 0px 12px 13px, rgba(0, 0, 0, 0.09) 0px -3px 5px;
+        }
+
+        input:checked+.switch-slider {
+            background-color: #4CAF50;
+        }
+
+        input:checked+.switch-slider:before {
+            transform: translateX(1.5em);
+        }
+
+        .connection {
+            display: flex;
+            align-items: end;
+            /* flex-direction: column; */
+        }
+
+        .nav-buttons {
+            height: 3.7em;
+            width: 3.7em;
+            cursor: pointer;
+        }
+
+        /* configuration panel */
+        .config-panel {
+            position: absolute;
+            top: 0;
+            left: 100%;
+            width: 80%;
+            height: 100%;
+            background-color: #2A2A3B;
+            color: #BFCDE7;
+            transition: left 0.4s ease;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .config-panel-inner {
+            position: absolute;
+        }
+
+        .config-panel.open {
+            left: 20%;
+        }
+
+        .config-panel {
+            /* max-height: 200px; */
+            /* max-height: 99%; */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            /* padding: 10px; */
+            /* border: 1px solid #ccc; */
+            /* border-radius: 8px; */
+        }
+
+        /* Custom Scrollbar Styling for Webkit (Chrome, Safari, Edge) */
+        .config-panel::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .config-panel::-webkit-scrollbar-track {
+            background: #888;
+            /* border-radius: 8px; */
+        }
+
+        .config-panel::-webkit-scrollbar-thumb {
+            background: #f1f1f1;
+            /* border-radius: 8px; */
+        }
+
+        .config-panel::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .config-panel {
+            scrollbar-width: thin;
+            scrollbar-color: #888 #f1f1f1;
+        }
+
+        .config-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1em;
+        }
+
+        .config-header h3 {
+            margin: 0;
+            flex-grow: 2;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            flex-direction: column;
+            align-items: start;
+            margin: 0.59em;
+            /* border: 1px solid #444; */
+            padding: 0.59em;
+            box-shadow: rgba(0, 0, 0, 0.8) 0px 4px 12px;
+        }
+
+        .controls > div {
+            width: 100%;
+        }
+
+        .controls>div:last-child {
+            padding-top: 1.3em;
+            margin-top: 1.3em;
+            border-top: 1px solid #ffffff;
+        }
+
+        .add-rem-control-btn {
+            align-self: flex-end;
+            font-size: 1em;
+        }
+
+        input.control-name {
+            border: 1px solid #444;
+            padding: 0;
+            width:100%;
+        }
+
+        select {
+            border: 1px solid #444;
+            padding: 0;
+        }
+
+        .control-elements {
+            display: grid;
+            grid-template-columns: 2, 1fr;
+            grid-template-rows: repeat(auto-fit, 2em);
+            column-gap: 0.35em;
+            row-gap: 0.35em;
+            /* margin-bottom: 0.35em; */
+        }
+
+        .button-control-elements {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .io-select {
+            /* display:flex; */
+            /* justify-content: space-between; */
+            margin-bottom: 0.35em;
+        }
+
+        .io-select>label {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-right: 0.35em;
+        }
+
+        .config-content {
+            padding: 1em;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        #controls {
+            display: grid;
+            /* grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); */
+            grid-template-rows: repeat(auto-fit, 6em);
+            column-gap: 0.8em;
+            row-gap: 0.8em;
+            padding: 10px;
+        }
+
+        #min-button {
+            position: absolute;
+            height: 3.7em;
+            width: 3.7em;
+            cursor: pointer;
+            bottom:1em;
+            right:-4em;
+        }
+
+        #min-button.show {
+            right:1em;
+        }
+
+        @media (max-width: 3399px) {#controls {grid-template-columns: repeat(8, 1fr)}}
+        @media (max-width: 1399px) {#controls {grid-template-columns: repeat(7, 1fr)}}
+        @media (max-width: 1199px) {#controls {grid-template-columns: repeat(6, 1fr)}}
+        @media (max-width: 999px)  {#controls {grid-template-columns: repeat(5, 1fr)}}
+        @media (max-width: 799px)  {#controls {grid-template-columns: repeat(4, 1fr)}}
+        @media (max-width: 599px)  {#controls {grid-template-columns: repeat(3, 1fr)}}
+
+        .ctr-slider {
+            background-color: #BFCDE722;
+            border-radius: 0.35em;
+            box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+            border: 1px solid #ffffff;
+            height: 6em;
+        }
+
+        .control-btn {
+            position: relative;
+            background-color: #BFCDE7;
+            border: 1px solid #BFCDE7;
+            /* border: none; */
+            padding: 0;
+            height: 6em;
+            border-radius: 0.35em;
+            box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+        }
+
+        .control-btn>button {
+            background: none;
+            border: none;
+            color: #20202b;
+            font-size: 2.2em;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0;
+            border-radius: 0.35em;
+            height: 100%;
+            width: 100%;
+        }
+
+        .control-btn>div {
+            height: 0.7em;
+            width: 0.7em;
+            position: absolute;
+            background-color: #000;
+            padding: 0;
+            margin: 0;
+            top: 0.35em;
+            right: 0.35em;
+            border-radius: 0.35em;
+            /* border: 1px solid #444; */
+            box-shadow: rgba(0, 0, 0, 0.4) 0px 4px 12px;
+        }
+
+        .control-btn.enabled>div {
+            background-color: #4BAC4F;
+        }
+
+        .slider-span {
+            grid-area: span 1 / span 4;
+        }
+
+        .ctr-spn-r1 {grid-row-end: span 1}
+        .ctr-spn-r2 {grid-row-end: span 2}
+        .ctr-spn-r3 {grid-row-end: span 3}
+        .ctr-spn-r4 {grid-row-end: span 4}
+        .ctr-spn-c1 {grid-column-end: span 1}
+        .ctr-spn-c2 {grid-column-end: span 2}
+        .ctr-spn-c3 {grid-column-end: span 3}
+        .ctr-spn-c4 {grid-column-end: span 4}
+    </style>
+</head>
+
+<body>
+    <div class="nav">
+        <div>
+            <!-- <h3>Device</h3> -->
+            <p>connection:<span id="status" class="disconnected">Disconnected</span></p>
+            <p>uptime:<span id="uptime"></span></p>
+            <p>core:<span id="core"></span></p>
+        </div>
+        <div class="connection">
+            <!-- <h3>Connection</h3> -->
+            <label class="switch">
+                <input type="checkbox" id="wsToggle" onchange="toggleWebSocket(this)">
+                <span class="switch-slider"></span>
+            </label>
+            <div class="gear nav-buttons">
+                <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path opacity="0.5"
+                        d="M16 4.00195C18.175 4.01406 19.3529 4.11051 20.1213 4.87889C21 5.75757 21 7.17179 21 10.0002V16.0002C21 18.8286 21 20.2429 20.1213 21.1215C19.2426 22.0002 17.8284 22.0002 15 22.0002H9C6.17157 22.0002 4.75736 22.0002 3.87868 21.1215C3 20.2429 3 18.8286 3 16.0002V10.0002C3 7.17179 3 5.75757 3.87868 4.87889C4.64706 4.11051 5.82497 4.01406 8 4.00195"
+                        stroke="#BFCDE7" stroke-width="1.5" />
+                    <path d="M10.5 14L17 14" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" />
+                    <path d="M7 14H7.5" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" />
+                    <path d="M7 10.5H7.5" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" />
+                    <path d="M7 17.5H7.5" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" />
+                    <path d="M10.5 10.5H17" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" />
+                    <path d="M10.5 17.5H17" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" />
+                    <path
+                        d="M8 3.5C8 2.67157 8.67157 2 9.5 2H14.5C15.3284 2 16 2.67157 16 3.5V4.5C16 5.32843 15.3284 6 14.5 6H9.5C8.67157 6 8 5.32843 8 4.5V3.5Z"
+                        stroke="#BFCDE7" stroke-width="1.5" />
+                </svg>
+            </div>
+            <div class="nav-buttons" onclick="goFullScreen()">
+                <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path opacity="0.5" d="M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z" stroke="#BFCDE7" stroke-width="1.5"/>
+                    <path d="M17 7H14M17 7V10M17 7L13.5 10.5M7 17H10M7 17V14M7 17L10.5 13.5" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <div id="min-button" onclick="goFullScreen()">
+            <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path opacity="0.5" d="M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z" stroke="#BFCDE7" stroke-width="1.5"/>
+                <path d="M10.5 13.5H7.5M10.5 13.5V16.5M10.5 13.5L7 17" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M13.5 10.5H16.5M13.5 10.5V7.5M13.5 10.5L17 7" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+    </div>
+
+    <div id="configPanel" class="config-panel ">
+        <div class="config-header">
+            <h3>Configuration</h3>
+            <svg onclick="saveConfig()" width="3.7em" height="3.7em" viewBox="0 0 24 24" fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <path opacity="0.5"
+                    d="M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z"
+                    stroke="#BFCDE7" stroke-width="1.5" />
+                <path d="M8.5 12.5L10.5 14.5L15.5 9.5" stroke="#BFCDE7" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+            </svg>
+            <button onclick="closeConfig()" class="config-close-btn">✕</button>
+        </div>
+        <div class="controls">
+            <button class="add-rem-control-btn" onclick="addControl(null)">Add</button>
+        </div>
+    </div>
+
+    <script>
+        const dev = true;
+        let socket;
+        let drag = null;
+        let ios = {
+            1:{
+                name:"Button",
+                elms:buttonControlElements
+            },
+            3:{
+                name:"Slider",
+                elms:sliderControlElements
+            },
+            48:{
+                name:"LED",
+                elms:ledControlElements
+            },
+            49:{
+                name:"GPIO",
+                elms:gpioControlElements
+            },
+            50:{
+                name:"PWM",
+                elms:pwmControlElements
+            },
+        }
+
+        document.querySelector('.gear').addEventListener('click', () => {
+            document.getElementById('configPanel').classList.add('open');
+        });
+
+        function closeConfig() {
+            document.getElementById('configPanel').classList.remove('open');
+        }
+
+        function addControlElement(fieldValues) {
+            const control= document.createElement('div');
+            const controlio= document.createElement('div');
+            controlio.className = "io-select";
+            const label = document.createElement('label');
+            label.className = "control-labels";
+            if (((fieldValues.type>>4)&1)==0) {label.innerHTML = "Input"}
+            else {label.innerHTML = "Output"}
+            controlio.appendChild(label);
+
+            const ioselect = document.createElement('select');
+            ioselect.setAttribute('onchange', 'changeControl(event)');
+            for (const io of Object.keys(ios).filter(key => ((fieldValues.type>>4)&1)==((key>>4)&1))) {
+                const opt = document.createElement('option');
+                opt.value = io;
+                opt.textContent = ios[io].name;
+                if (io === `${fieldValues.type}`) {opt.selected = "selected"}
+                ioselect.appendChild(opt);
+            }
+            controlio.appendChild(ioselect);
+            control.appendChild(controlio);
+            control.appendChild(ios[fieldValues.type].elms(fieldValues));
+
+            return control;
+        }
+
+        function addControl(fieldValues) {
+            let inFieldValues = {type:1};
+            let outFieldValues = {type:48};
+
+            if (fieldValues !== null) {
+                inFieldValues = fieldValues.in;
+                outFieldValues = fieldValues.out;
+            }
+
+            const container = document.getElementById('configPanel');
+            const controls = container.getElementsByClassName('controls');
+
+            const controlInput = addControlElement(inFieldValues);
+            const controlOutput = addControlElement(outFieldValues);
+
+            const control = document.createElement('div');
+            control.className = 'controls';
+            const controlAddButton = document.createElement('button');
+            controlAddButton.className = 'add-rem-control-btn';
+            controlAddButton.setAttribute('onclick', 'addControl(null)');
+            controlAddButton.innerHTML = 'Add';
+            control.appendChild(controlAddButton);
+
+            addRemButton = controls[controls.length - 1].children[0];
+            addRemButton.setAttribute('onclick', 'removeControl(event)');
+            addRemButton.innerHTML = 'Remove';
+
+
+            controls[controls.length - 1].appendChild(controlInput);
+            controls[controls.length - 1].appendChild(controlOutput);
+            container.appendChild(control);
+
+            return controls[controls.length - 1];
+        }
+
+        function removeControl(event) {
+            const elm = event.srcElement;
+            let elmParent = elm.parentElement;
+            elmParent.remove();
+        }
+
+        function changeControl(event) {
+            const parent = event.srcElement.parentElement.parentElement;
+            parent.removeChild(parent.children[1]);
+            parent.appendChild(ios[parseInt(event.srcElement.value)].elms(null));
+        }
+
+        function buttonControlElements(fieldValues) {
+            const elements = document.createElement('div');
+            elements.className = 'button control-elements';
+
+            const nameBox = document.createElement('input');
+            nameBox.className = 'control-name';
+            nameBox.value = 'Button';
+            elements.appendChild(nameBox);
+
+            return elements;
+        }
+
+        function sliderControlElements(fieldValues) {
+            const elements = document.createElement('div');
+            elements.className = 'frm-grp';
+            elements.innerHTML = `
+            <label>Name</label><input class="control-name">
+            <label>Orientation</label><select class="control-dropdown">
+                <option value="1">Horizontal</option>
+                <option value="2">Vertical</option>
+            </select>
+            <label>Length</label><input type="range" max="4" min="1" value="3"/>`;
+
+            return elements;
+        }
+
+        function ledControlElements(fieldValues) {
+            const elements = document.createElement('div');
+            elements.className = 'led control-elements';
+
+            return elements;
+        }
+
+        function gpioControlElements(fieldValues) {
+            let gpio = 0;
+
+            if (fieldValues !== null) {
+                if ("gpio" in fieldValues) {
+                    gpio = fieldValues.gpio;
+                }
+            }
+
+            const elements = document.createElement('div');
+            elements.className = 'gpio-control-elements';
+
+            const ioBox = document.createElement('select');
+            // ioBox.value = gpio;
+            const ios = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            for (const io of ios) {
+                const opt = document.createElement('option');
+                opt.value = io;
+                if (io === gpio) {opt.selected = "selected"}
+                opt.textContent = 'GPIO ' + io;
+                ioBox.appendChild(opt);
+            }
+            elements.appendChild(ioBox);
+
+            return elements;
+        }
+
+        function pwmControlElements(fieldValues) {
+            let gpio = 0;
+            let freq = 50;
+            let dtc0 = 0;
+            let dtc1 = 100;
+
+            if (fieldValues !== null) {
+                if ("gpio" in fieldValues) {
+                    gpio = fieldValues.gpio;
+                }
+                if ("freq" in fieldValues) {
+                    freq = fieldValues.freq;
+                }
+                if ("dtc0" in fieldValues) {
+                    dtc0 = fieldValues.dtc0;
+                }
+                if ("dtc1" in fieldValues) {
+                    dtc1 = fieldValues.dtc1;
+                }
+            }
+
+            const elements = document.createElement('div');
+            // elements.className = 'pwm-control-elements';
+            elements.className = 'frm-grp';
+            elements.innerHTML = `
+            <label>Frequency</label><input type="number" min="1" max="1000" value="${freq}" class="control-name">
+            <label>Duty Cycle Start</label><input type="number" min="0" max="100" value="${dtc0}" class="control-name">
+            <label>Duty Cycle End</label><input type="number" min="0" max="100" value="${dtc1}" class="control-name">`;
+
+            const ioBox = document.createElement('select');
+            ioBox.value = gpio;
+            const ios = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            for (const io of ios) {
+                const opt = document.createElement('option');
+                opt.value = io;
+                if (io === gpio) {opt.selected = "selected"}
+                opt.textContent = 'GPIO ' + io;
+                ioBox.appendChild(opt);
+            }
+            elements.prepend(ioBox);
+
+            const ioLabel = document.createElement('label');
+            ioLabel.innerHTML = "Channel";
+            elements.prepend(ioLabel);
+
+            return elements;
+        }
+
+        function saveConfig() {
+            const configsCollection = document.getElementsByClassName('controls');
+            const configs = Array.from(configsCollection);
+
+            // let cnf = new Uint8Array([c[1], c[0], 0x89, 0x01]);
+            let cnf = {};
+            let id = 1;
+
+            configs.forEach(config => {
+                if (config.children.length > 1) {
+                    const controls = Array.from(config.children).slice(1);
+                    const inputs = controls[0].children;
+                    const outputs = controls[1].children;
+
+                    cnf[id] = { type: parseInt(inputs[0].children[1].value) };
+                    switch (cnf[id].type) {
+                        case 1:
+                            cnf[id].target = id + 2;
+                            cnf[id].name = id + 1;
+                            cnf[id + 1] = { type: 160, string: inputs[1].children[0].value };
+                            id += 2;
+                            break;
+
+                        case 3:
+                            cnf[id].target = id + 2;
+                            cnf[id].name = id + 1;
+                            cnf[id].orientation = parseInt(inputs[1].children[3].value);
+                            cnf[id].len = parseInt(inputs[1].children[5].value);
+                            cnf[id].min = 0;//parseInt(inputs[1].children[5].value);
+                            cnf[id].max = 100;//parseInt(inputs[1].children[5].value);
+                            cnf[id].val = 0;//parseInt(inputs[1].children[5].value);
+                            cnf[id + 1] = { type: 160, string: inputs[1].children[0].value };
+                            id += 2;
+                            break;
+                        default:
+                            break;
+                    }
+
+                    cnf[id] = { type: parseInt(outputs[0].children[1].value) };
+                    switch (cnf[id].type) {
+                        case 48:
+                            id++;
+                            break;
+
+                        case 49:
+                            cnf[id].gpio = parseInt(outputs[1].children[0].value);
+                            id++;
+                            break;
+
+                        case 50:
+                            cnf[id].gpio = parseInt(outputs[1].children[1].value);
+                            cnf[id].freq = parseInt(outputs[1].children[3].value);
+                            cnf[id].valx = 0;//parseInt(outputs[1].children[0].value);
+                            cnf[id].val0 = 0;//parseInt(outputs[1].children[0].value);
+                            cnf[id].dtc0 = parseInt(outputs[1].children[5].value);
+                            cnf[id].val1 = 100;//parseInt(outputs[1].children[0].value);
+                            cnf[id].dtc1 = parseInt(outputs[1].children[7].value);
+                            id++;
+                            break;
+
+                        default:
+                            break;
+                    }
+                }
+            });
+            console.log(cnf);
+            buildInterface(cnf);
+
+            const binary = marshalControls(cnf);
+
+            const wsConfigMsg = new Uint8Array(binary.length + 3);
+            wsConfigMsg[0] = 0x0A;
+            wsConfigMsg[1] = (binary.length >> 8) & 0xFF;
+            wsConfigMsg[2] = binary.length & 0xFF;
+            wsConfigMsg.set(binary, 3);
+            console.log(wsConfigMsg);
+            if (!dev) {
+                socket.send(wsConfigMsg);
+            }
+
+            return cnf;
+        }
+
+        function clearControlInterface() {
+            controlInterface = document.getElementById('controls');
+
+            while(true) {
+                if (controlInterface.children.length === 1) {break;}
+                controlInterface.removeChild(controlInterface.lastChild);
+            }
+        }
+
+        function buildInterface(config) {
+            clearControlInterface();
+
+            controlInterface = document.getElementById('controls');
+
+            for (const [id, control] of Object.entries(config)) {
+                switch (control.type) {
+                    case 1:
+                        const controlButton = document.createElement('div');
+                        const controlButtonIndicator = document.createElement('div');
+                        controlButton.className = 'control-btn';
+                        controlButton.setAttribute('onclick', `buttonClicked(event,${control.target}, 1)`);
+                        const button = document.createElement('button');
+                        button.innerHTML = config[control.name].string;
+                        controlButton.appendChild(controlButtonIndicator);
+                        controlButton.appendChild(button);
+                        controlInterface.appendChild(controlButton);
+                        break;
+
+                    case 3:
+                        const controlElement= document.createElement('div');
+                        controlElement.classList.add('ctr-slider');
+
+                        let vbx = 100;
+                        let vby = 100;
+                        let hgt = 6;
+
+                        if (control.orientation==1) {
+                            controlElement.classList.add('ctr-spn-r1');
+                            controlElement.classList.add(`ctr-spn-c${control.len}`);
+                            vbx *= control.len*2;
+                        } else {
+                            controlElement.classList.add('ctr-spn-c1');
+                            controlElement.classList.add(`ctr-spn-r${control.len}`);
+                            vby *= control.len;
+                            hgt = hgt*control.len + 0.8*(control.len-1);
+                        }
+                        const x1 = 50;
+                        const y1 = 50;
+                        const x2 = vbx-50;
+                        const y2 = vby-50;
+
+                        const range = control.max - control.min;
+                        const cx = control.val*((x2-x1)/range) + x1;
+                        const cy = control.val*((y2-y1)/range) + y1;
+
+                        controlElement.setAttribute('style',`height:${hgt}em`);
+
+                        controlElement.innerHTML = `
+                            <svg class="slider" width="100%" height="100%" viewbox="0 0 ${vbx} ${vby}" preserveAspectRatio="xMidYMid meet">
+                                <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ccc" stroke-width="2" stroke-linecap="round" />
+                                <circle id="knob" cx="${cx}" cy="${cy}" r="20" fill="#2196f3" cursor="pointer" />
+                            </svg>`;
+
+                        controlElement.querySelector("svg").style.pointerEvents = "all";
+                        controlElement.querySelector("svg").addEventListener('pointerdown', (e) => {
+                            e.preventDefault();
+                        });
+                        controlElement.getElementsByTagName("circle")[0].addEventListener('pointerdown', (e) => {
+                            drag = { ...control,controlElement, mode:"mouse"};
+                            e.preventDefault();
+                        });
+                        controlElement.getElementsByTagName("circle")[0].addEventListener('touchstart', (e) => {
+                            drag = { ...control,controlElement, mode:"touch"};
+                            e.preventDefault();
+                        });
+                        controlInterface.appendChild(controlElement);
+
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+        }
+
+        function clearConfigInterface() {
+            let configInterface = document.getElementById('configPanel');
+            const controls = Object.entries(configInterface.getElementsByClassName('controls'));
+
+            if (controls.length > 1) {
+                for (let iControl = 0;iControl<controls.length-1;iControl++) {
+                    configInterface.removeChild(controls[iControl][1]);
+                }
+            }
+        }
+
+        function reconstructConfigInterface(config) {
+            clearConfigInterface();
+
+            let configInterface = document.getElementById('configPanel');
+            const controls = Object.entries(configInterface.getElementsByClassName('controls'));
+
+            let fieldValues = {in:{},out:{}};
+            for (const [id, control] of Object.entries(config)) {
+                if (((control.type>>4)&1)==0 && control.type < 64) {
+                    // fieldValues.in.type = control.type;
+                    fieldValues.in = { ...control };
+                    // fieldValues.out.type = config[control.target].type;
+                    fieldValues.out = { ...config[control.target] };
+                    addControl(fieldValues);
+                }
+            }
+        }
+
+        function marshalControls(controls) {
+            const encoder = new TextEncoder();
+            const output = [];
+
+            for (const [idStr, control] of Object.entries(controls)) {
+                const id = parseInt(idStr);
+                const buffer = [];
+
+                // Type (1 byte)
+                buffer.push(control.type & 0xFF);
+
+                // Empty byte (1 byte)
+                buffer.push(0x00);
+
+                // ID (2 bytes, big endian)
+                buffer.push((id >> 8) & 0xFF, id & 0xFF);
+
+                // Type-specific payload
+                switch (control.type) {
+                    case 1:{
+                        buffer.push(0x04);
+                        const nameId = control.name;
+                        buffer.push((nameId >> 8) & 0xFF, nameId & 0xFF);
+                        const targetId = control.target;
+                        buffer.push((targetId >> 8) & 0xFF, targetId & 0xFF);
+                        break;
+                    }
+                    case 3:{
+                        buffer.push(0x0B);
+                        buffer.push((control.name >> 8) & 0xFF, control.name & 0xFF);
+                        buffer.push((control.target >> 8) & 0xFF, control.target & 0xFF);
+                        buffer.push((control.len << 1) & 0xFE | control.orientation & 0x01);
+                        buffer.push((control.min >> 8) & 0xFF, control.min & 0xFF);
+                        buffer.push((control.max >> 8) & 0xFF, control.max & 0xFF);
+                        buffer.push((control.val >> 8) & 0xFF, control.val & 0xFF);
+                        break;
+                    }
+                    case 160:{
+                        const encodedStr = encoder.encode(control.string);
+                        if (encodedStr.length > 255) {
+                            throw new Error("String too long for 1-byte length prefix");
+                        }
+                        buffer.push(encodedStr.length);
+                        buffer.push(...encodedStr);
+                        break;
+                    }
+                    case 48:{
+                        buffer.push(0x00);
+                        break;
+                    }
+                    case 49:{
+                        buffer.push(0x01);
+                        buffer.push(control.gpio);
+                        break;
+                    }
+                    case 50:{
+                        buffer.push(0x0D);
+                        buffer.push(control.gpio);
+                        buffer.push((control.freq>>8)&0xFF);
+                        buffer.push((control.freq>>0)&0xFF);
+                        if (control.valx >= 0) {
+                            buffer.push((control.valx>>8)&0xFF);
+                            buffer.push((control.valx)&0xFF);
+                        } else {
+                            buffer.push((((1<<16)+control.valx)>>8)&0xFF);
+                            buffer.push((((1<<16)+control.valx))&0xFF);
+                        }
+
+                        buffer.push((control.dtc0>>8)&0xFF);
+                        buffer.push((control.dtc0>>0)&0xFF);
+                        if (control.val0 >= 0) {
+                            buffer.push((control.val0>>8)&0xFF);
+                            buffer.push((control.val0)&0xFF);
+                        } else {
+                            buffer.push((((1<<16)+control.val0)>>8)&0xFF);
+                            buffer.push((((1<<16)+control.val0))&0xFF);
+                        }
+
+                        buffer.push((control.dtc1>>8)&0xFF);
+                        buffer.push((control.dtc1>>0)&0xFF);
+                        if (control.val1 >= 0) {
+                            buffer.push((control.val1>>8)&0xFF);
+                            buffer.push((control.val1)&0xFF);
+                        } else {
+                            buffer.push((((1<<16)+control.val1)>>8)&0xFF);
+                            buffer.push((((1<<16)+control.val1))&0xFF);
+                        }
+
+                        break;
+                    }
+                    default:
+                        throw new Error(`Unknown control type: ${control.type}`);
+                }
+
+                output.push(...buffer);
+            }
+
+            return Uint8Array.from(output);
+        }
+
+        function unmarshalControls(binary) {
+            const decoder = new TextDecoder();
+            const view = new DataView(binary.buffer, binary.byteOffset, binary.byteLength);
+            const controls = {};
+            let offset = 0;
+
+            while (offset < binary.length) {
+                // Type (1 byte)
+                const type = view.getUint8(offset++);
+
+                // Empty byte (skip)
+                offset++;
+
+                // ID (2 bytes, big endian)
+                const id = view.getUint16(offset);
+                offset += 2;
+
+                // Initialize the control
+                const control = { type };
+
+                // Type-specific payload
+                switch (type) {
+                    case 1: {
+                        // 2 bytes: reference to another control's ID
+                        offset++;
+                        const nameId = view.getUint16(offset);
+                        control.name = nameId;
+                        offset += 2;
+                        const targetId = view.getUint16(offset);
+                        control.target = targetId;
+                        offset += 2;
+                        break;
+                    }
+                    case 3: {
+                        offset++;
+                        control.name = view.getUint16(offset);
+                        offset += 2;
+                        control.target = view.getUint16(offset);
+                        offset += 2;
+                        const lenAndOrient = view.getUint8(offset++);
+                        control.len = lenAndOrient >> 1;
+                        control.orientation = lenAndOrient & 0x01;
+                        control.min = view.getInt16(offset);
+                        offset += 2;
+                        control.max = view.getInt16(offset);
+                        offset += 2;
+                        control.val = view.getInt16(offset);
+                        offset += 2;
+                        break;
+                    }
+                    case 160: {
+                        // 1 byte: string length, then string bytes
+                        const strLen = view.getUint8(offset++);
+                        const strBytes = binary.slice(offset, offset + strLen);
+                        control.string = decoder.decode(strBytes);
+                        offset += strLen;
+                        break;
+                    }
+                    case 48: {
+                        // No payload
+                        offset++;
+                        break;
+                    }
+                    case 49: {
+                        offset++;
+                        control.gpio = view.getUint8(offset++);
+                        break;
+                    }
+                    case 50: {
+                        offset++;
+                        control.gpio = view.getUint8(offset++);
+                        control.freq = view.getUint16(offset);
+                        offset += 2;
+
+                        let valx = view.getInt16(offset);
+                        control.valx = valx;
+                        offset += 2;
+
+                        control.dtc0 = view.getUint16(offset);
+                        offset += 2;
+
+                        let val0 = view.getInt16(offset);
+                        control.val0 = val0;
+                        offset += 2;
+
+                        control.dtc1 = view.getUint16(offset);
+                        offset += 2;
+
+                        let val1 = view.getInt16(offset);
+                        control.val1 = val1;
+                        offset += 2;
+                        break;
+                    }
+                    default:
+                        throw new Error(`Unknown control type: ${type}`);
+                }
+
+                controls[id] = control;
+            }
+
+            return controls;
+        }
+
+        function buttonClicked(event, target, value) {
+            const binaryData = new Uint8Array([1, 0, 8, 1, 1, (target >> 8) & 0xFF, target & 0xFF, 0, 0, 0, value]);
+            socket.send(binaryData);
+
+            if (value === 1) {
+                event.srcElement.parentElement.classList.add('enabled');
+                value = 0;
+            } else {
+                event.srcElement.parentElement.classList.remove('enabled');
+                value = 1;
+            }
+            event.srcElement.parentElement.setAttribute('onclick', `buttonClicked(event,${target}, ${value})`);
+        }
+
+        function updateSliderPosition(visPos,movePos,clientLen,sliderStart,sliderEnd) {
+            let clientPos = (visPos - 50)*((clientLen)/300);
+            let sliderPos = (clientPos)*((sliderEnd-sliderStart)/clientLen) + sliderStart;
+            let visMovePos = (movePos - sliderPos)*(300/(clientLen)) + visPos;
+            return Math.max(50, Math.min(visMovePos, 350));
+        }
+
+        function updateSlider(e) {
+            const svg = drag.controlElement.querySelector("svg");
+            const rect = svg.getBoundingClientRect();
+
+            let mouseX = -rect.left;
+            let mouseY = -rect.top;
+
+            if (drag.mode === "mouse") {
+                mouseX = mouseX + e.clientX;
+                mouseY = mouseY + e.clientY;
+            } else if (drag.mode === "touch") {
+                mouseX = mouseX + e.touches[0].clientX;
+                mouseY = mouseY + e.touches[0].clientY;
+            }
+
+            const scaleX = svg.viewBox.baseVal.width / rect.width;
+            const scaleY = svg.viewBox.baseVal.height / rect.height;
+
+            let xRange = 100;
+            if (drag.orientation===1) {xRange = 200*drag.len}
+            const svgX = Math.max(50, Math.min(mouseX * scaleX, xRange-50));
+
+            let yRange = 100;
+            if (drag.orientation===2) {yRange *= drag.len}
+            const svgY = Math.max(50, Math.min(mouseY * scaleY, yRange-50));
+
+            const knob = svg.querySelector("#knob");
+            knob.setAttribute("cx", svgX);
+            knob.setAttribute("cy", svgY);
+
+            if (drag.orientation===1){
+                return Math.round(((svgX - 50) / xRange) * 100);
+            } else {
+                return Math.round(((svgY - 50) / yRange) * 100);
+            }
+        }
+
+        document.addEventListener("pointerup", () => {
+            drag = null;
+        });
+
+        document.addEventListener("touchend", () => {
+            drag = null;
+        });
+
+        document.addEventListener("pointermove", (e) => {
+            if (drag && drag.mode === "mouse") {
+                let value = updateSlider(e);
+                if (value !== drag.val) {
+                    drag.val = value;
+                    const binaryData = new Uint8Array([1, 0, 8, 1, 1, (drag.target >> 8) & 0xFF, drag.target & 0xFF, 0, 0, (value >> 8) & 0xFF, value & 0xFF]);
+                    // console.log(value);
+                    if (!dev) {
+                        socket.send(binaryData);
+                    }
+                }
+            }
+        });
+
+        document.addEventListener("touchmove", (e) => {
+            if (drag && drag.mode === "touch") {
+                let value = updateSlider(e);
+                if (value !== drag.val) {
+                    drag.val = value;
+                    const binaryData = new Uint8Array([1, 0, 8, 1, 1, (drag.target >> 8) & 0xFF, drag.target & 0xFF, 0, 0, (value >> 8) & 0xFF, value & 0xFF]);
+                    // console.log(value);
+                    if (!dev) {
+                        socket.send(binaryData);
+                    }
+                }
+            };
+            e.preventDefault();
+        });
+
+        function toggleWebSocket(toggle) {
+            if (toggle.checked) {
+                connectWebSocket();
+            } else {
+                disconnectWebSocket();
+            }
+        }
+
+        function connectWebSocket() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                console.log("WebSocket already connected.");
+                return;
+            }
+
+            socket = new WebSocket("ws://" + location.host);
+
+            socket.onopen = function () {
+                document.getElementById("status").textContent = "Connected";
+                document.getElementById("status").className = "connected";
+                // console.log("WebSocket connected.");
+            };
+
+            socket.binaryType = "arraybuffer";
+            socket.onmessage = (event) => {
+                if (event.data instanceof ArrayBuffer) {
+                    const data = new Uint8Array(event.data);
+                    console.log("Received binary data:", data);
+
+                    const config = unmarshalControls(data);
+                    console.log(config);
+                    reconstructConfigInterface(config);
+                    buildInterface(config);
+                } else {
+                    if (event.data.startsWith("core ")) {
+                        document.getElementById("core").innerText = event.data.substring(5) + "°C";
+                    }
+
+                    if (event.data.startsWith("uptime ")) {
+                        const uptime = parseInt(event.data.substring(7));
+                        if (uptime < 60) {
+                            document.getElementById("uptime").innerText = `${uptime} seconds`;
+                        } else if (uptime < 3600) {
+                            document.getElementById("uptime").innerText = `${Math.round(uptime / 60)}m${uptime % 60}s`;
+                        } else {
+                            document.getElementById("uptime").innerText = `${Math.round(uptime / 3600)}h${Math.round(uptime / 60) - 60 * Math.round(uptime / 3600)}m${uptime % 60}s`;
+                        }
+                    }
+                }
+            };
+
+            socket.onclose = function () {
+                document.getElementById("status").textContent = "Disconnected";
+                document.getElementById("status").className = "disconnected";
+                clearConfigInterface();
+                clearControlInterface();
+                // console.log("WebSocket disconnected.");
+            };
+
+            socket.onerror = function (error) {
+                console.error("WebSocket error:", error);
+            };
+        }
+
+        function disconnectWebSocket() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
+                clearConfigInterface();
+                clearControlInterface();
+            }
+        }
+
+        function sendMessage() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const msg = sendmsg.value;
+                if (msg[0] === 'm') {
+                    let b0 = 0x10;
+                    b0 = b0 | parseInt(msg[1]);
+
+                    let b1;
+                    switch (msg[2]) {
+                        case 'x':
+                            b1 = 0x01;
+                            break;
+                    }
+                    let b2 = parseInt(msg.substring(3));
+                    const binaryData = new Uint8Array([0x00, b2, b1, b0]);
+                    socket.send(binaryData);
+                } else {
+                    socket.send(sendmsg.value);
+                }
+            } else {
+                console.log("WebSocket is not open.");
+            }
+        }
+
+        // Optional: close socket when page unloads
+        window.addEventListener("beforeunload", () => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
+                clearConfigInterface();
+                clearControlInterface();
+            }
+        });
+
+        function goFullScreen() {
+            if (!document.fullscreenElement) {
+                controlInterface = document.getElementById('controls');
+                controlInterface.requestFullscreen();
+                document.getElementById('min-button').classList.add('show');
+            } else {
+                document.exitFullscreen?.();
+                document.getElementById('min-button').classList.remove('show');
+            }
+        }
+
+        if (dev) {
+            addControl(null);
+            addControl({in:{type:3},out:{type:50}});
+            addControl(null);
+            addControl(null);
+            addControl(null);
+            saveConfig();
+        }
+    </script>
+</body>
+
+</html>

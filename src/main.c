@@ -24,9 +24,9 @@ int main() {
     // Allow time for serial connection to establish
     sleep_ms(3000);
 
-    printf("       ------------\n");
-    printf("      |  neoGraph  |\n");
-    printf("------             ^\n");
+    printf("       ------------   --     ----\n");
+    printf("      |  neoGraph  | |  |   |    \n");
+    printf("------              -    ---     \n");
     printf("  on Raspberry Pi Pico 2 W\n");
     printf("\nSDK version: %s\n", PICO_SDK_VERSION_STRING);
     

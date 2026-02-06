@@ -9,6 +9,7 @@
 #include "pico/multicore.h"
 #include "config.h"
 // #include "wifi.h"
+#include "config/config_iterator.h"
 
 #define PREFIX "neoGraph-"
 #define PREFIX_LEN 9
@@ -19,7 +20,7 @@
 #define SECURE_FLASH_SIZE 0x100
 
 #define FLASH_TARGET_OFFSET (PICO_FLASH_SIZE_BYTES - FLASH_SIZE)
-#define SECURE_FLASH_TARGET_OFFSET (PICO_FLASH_SIZE_BYTES - FLASH_SIZE-SECURE_FLASH_SIZE)
+#define SECURE_FLASH_TARGET_OFFSET (PICO_FLASH_SIZE_BYTES - FLASH_SIZE - SECURE_FLASH_SIZE)
 
 void read_secrets(uint8_t* buffer, size_t len) {
     const uint8_t *flash_target_contents = (const uint8_t *)(XIP_BASE + SECURE_FLASH_TARGET_OFFSET);
@@ -55,59 +56,6 @@ bool next_config_element(config_element_iterator *elms) {
     printf("debug pos:%d, size:%d, type:%X, id:%d, len:%d\n",elms->pos,elms->size,elms->type,elms->id,elms->len);
 }
 
-void apply_store(const uint8_t* data, size_t length) {
-    printf("storing config to rom\n");
-    uint32_t ints = save_and_disable_interrupts();
-
-    flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SIZE);
-    flash_range_program(FLASH_TARGET_OFFSET, data, length+3);
-    restore_interrupts(ints);
-    printf("unmarshalling config\n");
-    unmarshal_controls(data+3,length);
-}
-
-void update_store(const uint8_t* data, size_t length) {
-    printf("updating config in rom\n");
-    uint32_t ints = save_and_disable_interrupts();
-
-    uint8_t header_buffer[3];
-    read_config(header_buffer,3);
-    uint16_t data_length = (header_buffer[1] << 8) | header_buffer[2];
-    uint8_t config_buffer[FLASH_SIZE];
-    read_config(config_buffer,data_length+3);
-
-    config_element_iterator upd_itr = {
-        .buf = data,
-        .pay = NULL,
-        .pos = 0,
-        .size = length
-    };
-
-    config_element_iterator itr = {
-        .buf = config_buffer+3,
-        .pay = NULL,
-        .pos = 0,
-        .size = data_length
-    };
-
-    while (next_config_element(&itr)) {
-        if (itr.type == upd_itr.type) {
-            printf("got B2\n");
-            if (itr.id != upd_itr.id) continue;
-
-            if (itr.pay[0] == upd_itr.pay[0]) {
-                printf("match network opts\n");
-                flash_range_program(FLASH_TARGET_OFFSET+upd_itr.pos-(upd_itr.len-1), upd_itr.pay+1, upd_itr.len-1);
-                printf("debug opts:%d\n", upd_itr.pay);
-                break;
-            }
-        }
-    }
-
-    restore_interrupts(ints);
-    printf("done updating config\n");
-}
-
 void write_secrets(const uint8_t* data, size_t length) {
     printf("storing config to rom\n");
     uint32_t ints = save_and_disable_interrupts();
@@ -124,6 +72,145 @@ void write_config(const uint8_t* data, size_t length) {
     flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SIZE);
     flash_range_program(FLASH_TARGET_OFFSET, data, length);
     restore_interrupts(ints);
+}
+
+void apply_config(const uint8_t* data, size_t length) {
+    write_config(data,length);
+    printf("unmarshalling config\n");
+    unmarshal_controls(data+3,length-3);
+}
+
+void update_secrets(const uint8_t* new_buf, size_t new_len) {
+    printf("updating secrets in rom with message, len %d\n", new_len);
+    for (int i = 0; i < new_len; i++) {
+        printf("%02X", new_buf[i]);
+        printf(" ");
+    }
+    printf("\n");
+
+    uint8_t config_test1_buffer[SECURE_FLASH_SIZE];
+    size_t data_test1_length = 70;
+    read_secrets(config_test1_buffer,data_test1_length);
+    printf("before: retrieved config (%d bytes) from rom\n", data_test1_length);
+
+    for (int i = 0; i < data_test1_length; i++) {
+        printf("%02X", config_test1_buffer[i]);
+        printf(" ");
+    }
+    printf("\n");
+
+    uint32_t ints = save_and_disable_interrupts();
+
+    uint8_t header_buffer[3];
+    read_secrets(header_buffer,3);
+    uint16_t data_length = (header_buffer[1] << 8) | header_buffer[2];
+    uint8_t config_buffer[SECURE_FLASH_SIZE];
+    read_secrets(config_buffer,data_length+3);
+
+    config_element_iterator itr;
+    config_element_iterator_init(&itr, config_buffer+3, data_length);
+
+    config_element_iterator new_itr;
+    config_element_iterator_init(&new_itr, new_buf, new_len);
+
+    if (!new_itr.next(&new_itr)) {
+        printf("no message in update packet\n");
+    }
+
+    while (itr.next(&itr)) {
+        if (itr.type == new_itr.type) {
+            if (itr.id != new_itr.id) continue;
+
+            if (itr.pay[0] == new_itr.pay[0]) {
+                const uint8_t *flash_target_contents = (const uint8_t *)(XIP_BASE + SECURE_FLASH_TARGET_OFFSET);
+                const size_t target_mem_loc = itr.pos+3-(itr.len-1);
+                printf("target msg\n");
+                for (int i = itr.pos+3-(itr.len-1); i < itr.pos+3; i++) {
+                    printf("%02X", flash_target_contents[i]);
+                    printf(" ");
+                }
+                printf("\n");
+
+                printf("replacing pos %d, len %d with %d, val %02X with %02X\n", itr.pos+3-(itr.len-1), itr.len-1, new_itr.len-1, flash_target_contents[target_mem_loc], new_itr.pay[1]);
+                
+                flash_range_erase(SECURE_FLASH_TARGET_OFFSET, SECURE_FLASH_SIZE);
+
+                uint8_t assem_buf[SECURE_FLASH_SIZE];
+                size_t assem_len = itr.pos+3-itr.len-5;
+                memcpy(assem_buf, config_buffer, assem_len);
+                memcpy(assem_buf+assem_len, new_buf, new_len);
+                assem_len += new_len;
+                memcpy(assem_buf+assem_len, config_buffer+(itr.pos+3), data_length-itr.pos);
+                assem_len += data_length-itr.pos;
+                assem_buf[1] = ((assem_len-3) >> 8) & 0xFF;
+                assem_buf[2] = (assem_len-3) & 0xFF;
+
+                flash_range_program(SECURE_FLASH_TARGET_OFFSET, assem_buf, assem_len);
+                break;
+            }
+        }
+    }
+
+    restore_interrupts(ints);
+
+    uint8_t config_test2_buffer[SECURE_FLASH_SIZE];
+    size_t data_test2_length = 70;
+    read_secrets(config_test2_buffer,data_test2_length);
+    printf("after: retrieved config (%d bytes) from rom\n", data_test2_length);
+
+    for (int i = 0; i < data_test2_length; i++) {
+        printf("%02X", config_test2_buffer[i]);
+        printf(" ");
+    }
+    printf("\n");
+
+    printf("done updating secrets\n");
+}
+
+void update_config(const uint8_t* new_buf, size_t new_len) {
+    uint32_t ints = save_and_disable_interrupts();
+
+    uint8_t header_buffer[3];
+    read_config(header_buffer,3);
+    uint16_t data_length = (header_buffer[1] << 8) | header_buffer[2];
+    uint8_t config_buffer[FLASH_SIZE];
+    read_config(config_buffer,data_length+3);
+
+    config_element_iterator itr;
+    config_element_iterator_init(&itr, config_buffer+3, data_length);
+
+    config_element_iterator new_itr;
+    config_element_iterator_init(&new_itr, new_buf, new_len);
+
+    if (!new_itr.next(&new_itr)) {
+        printf("no message in update packet\n");
+    }
+
+    while (itr.next(&itr)) {
+        if (itr.type == new_itr.type) {
+            if (itr.id != new_itr.id) continue;
+
+            if (itr.pay[0] == new_itr.pay[0]) {
+                flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SIZE);
+
+                uint8_t assem_buf[FLASH_SIZE];
+                size_t assem_len = itr.pos+3-itr.len-5;
+                memcpy(assem_buf, config_buffer, assem_len);
+                memcpy(assem_buf+assem_len, new_buf, new_len);
+                assem_len += new_len;
+                memcpy(assem_buf+assem_len, config_buffer+(itr.pos+3), data_length-itr.pos);
+                assem_len += data_length-itr.pos;
+                assem_buf[1] = ((assem_len-3) >> 8) & 0xFF;
+                assem_buf[2] = (assem_len-3) & 0xFF;
+
+                flash_range_program(FLASH_TARGET_OFFSET, assem_buf, assem_len);
+                break;
+            }
+        }
+    }
+
+    restore_interrupts(ints);
+    printf("done updating config\n");
 }
 
 void mac_to_name(const uint8_t mac[6], char out[5]) {
@@ -155,13 +242,15 @@ size_t build_secrets(uint8_t *buf, const char name[5], const uint8_t *mac) {
     *p++ = 0x00; // reserved
     *p++ = 0x00; // elm ID H
     *p++ = 0x00; // elm ID L
-    *p++ = 0x0A; // elm Len
+    *p++ = 0x09; // elm Len
     *p++ = 0x03; // field 0x03=pass
-    memcpy(p, "neoGraph", 8);
+    memcpy(p, "47353749", 8);
+    // memcpy(p, "6yxrrGcsp9#EnnV3", 16);
+    // memcpy(p, "neoGraph", 8);
     p += 8;
     // memcpy(p, name, NAME_LEN);
     // p += NAME_LEN;
-    *p++ = 0x00;
+    // *p++ = 0x00;
 
     return (size_t)(p - buf);
 }
@@ -184,11 +273,10 @@ size_t build_config(uint8_t *buf, const char name[5], const uint8_t *mac) {
     *p++ = 0x00; // reserved
     *p++ = 0x00; // elm ID H
     *p++ = 0x00; // elm ID L
-    *p++ = 0x06; // elm Len
+    *p++ = 0x05; // elm Len
     *p++ = 0x01; // field 0x01=name
     memcpy(p, name, NAME_LEN);
     p += NAME_LEN;
-    *p++ = 0x00;
 
     // --- 0xB1 block #2 ---
     *p++ = 0xB1;
@@ -214,24 +302,25 @@ size_t build_config(uint8_t *buf, const char name[5], const uint8_t *mac) {
     *p++ = 0x00; // reserved
     *p++ = 0x00; // elm ID H
     *p++ = 0x00; // elm ID L
-    *p++ = 0x06; // elm Len
+    *p++ = 0x05; // elm Len
     *p++ = 0x01; // field 0x01=name
     memcpy(p, name, NAME_LEN);
     p += NAME_LEN;
-    *p++ = 0x00;
 
     // --- 0xB3 block #2 ---
     *p++ = 0xB3;
     *p++ = 0x00; // reserved
     *p++ = 0x00; // elm ID H
     *p++ = 0x00; // elm ID L
-    *p++ = 0x0F; // elm Len
+    // *p++ = 0x0E; // elm Len
+    *p++ = 0x04; // elm Len
     *p++ = 0x02; // field 0x02=ssid
-    memcpy(p, PREFIX, PREFIX_LEN);
-    p += PREFIX_LEN;
-    memcpy(p, name, NAME_LEN);
-    p += NAME_LEN;
-    *p++ = 0x00;
+    // memcpy(p, PREFIX, PREFIX_LEN);
+    // p += PREFIX_LEN;
+    // memcpy(p, name, NAME_LEN);
+    memcpy(p, "LRX", 3);
+    // memcpy(p, "Vodacom-9F1556", 14);
+    p += 3;
 
     return (size_t)(p - buf);
 }
@@ -267,59 +356,61 @@ size_t wrap_config(uint8_t *out, const char name[5], const uint8_t *mac) {
 }
 
 int unmarshal_network_config(
-    uint8_t *buf,
-    size_t size, 
+    uint8_t *data,
+    size_t length, 
     const uint8_t *target_mac,
     network_setup *out
 ) {
     // memset(out->device.name, 0, sizeof(out->device.name));
     // memset(out->network.name, 0, sizeof(out->network.name));
+    // memset(out->network.ssid, 0, sizeof(out->network.ssid));
 
-    config_element_iterator itr = {
-        .buf = buf,
-        .pay = NULL,
-        .pos = 0,
-        .size = size
-    };
+    config_element_iterator itr;
+    config_element_iterator_init(&itr, data, length);
 
-    while (next_config_element(&itr)) {
+    // config_element_iterator itr = {
+    //     .buf = buf,
+    //     .pay = NULL,
+    //     .pos = 0,
+    //     .size = size
+    // };
+
+    while (itr.next(&itr)) {
         if (itr.type == 0xB0) {
-            // printf("got B0\n");
+            printf("got B0\n");
             if (memcmp(itr.pay+1, target_mac, MAC_LEN) == 0) {
-                // printf("match MAC\n");
+                printf("match MAC\n");
                 out->device.id = itr.id;
                 break;
             }
         }
     }
 
-    itr.pos = 0;
-    itr.pay = NULL;
+    itr.reset(&itr);
 
-    while (next_config_element(&itr)) {
+    while (itr.next(&itr)) {
         if (itr.type == 0xB1) {
-            // printf("got B1\n");
+            printf("got B1\n");
             if (itr.id != out->device.id) continue;
             uint8_t field_number = itr.pay[0];
             if (field_number == 0x01) {
-                // printf("match device name\n");
+                printf("match device name\n");
                 memcpy(out->device.name, itr.pay+1, itr.len-1);
-                // printf("debug name:%s\n", out->device.name);
+                printf("debug name:%s\n", out->device.name);
                 continue;
             }
 
             if (field_number == 0x02) {
-                // printf("match device network\n");
+                printf("match device network\n");
                 out->network.id = itr.pay[1]<<8 | itr.pay[2];
                 continue;
             }
         }
     }
 
-    itr.pos = 0;
-    itr.pay = NULL;
+    itr.reset(&itr);
 
-    while (next_config_element(&itr)) {
+    while (itr.next(&itr)) {
         if (itr.type == 0xB2) {
             printf("got B2\n");
             if (itr.id != out->network.id) continue;
@@ -334,31 +425,32 @@ int unmarshal_network_config(
         }
     }
 
-    itr.pos = 0;
-    itr.pay = NULL;
+    itr.reset(&itr);
 
-    while (next_config_element(&itr)) {
+    while (itr.next(&itr)) {
         if (itr.type == 0xB3) {
-            // printf("got B3\n");
+            printf("got B3\n");
             if (itr.id != out->network.id) continue;
             uint8_t field_number = itr.pay[0];
 
             if (field_number == 0x01) {
-                // printf("match network name\n");
+                printf("match network name\n");
                 memcpy(out->network.name, itr.pay+1, itr.len-1);
-                // printf("debug name:%s\n", out->network.name);
+                printf("debug name:%s\n", out->network.name);
                 continue;
             }
 
             if (field_number == 0x02) {
-                // printf("match network ssid\n");
+                printf("match network ssid\n");
                 memcpy(out->network.ssid, itr.pay+1, itr.len-1);
-                // printf("debug ssid:%s\n", out->network.ssid);
+                printf("debug ssid:%s\n", out->network.ssid);
                 continue;
             }
 
             if (field_number == 0x03) {
+                printf("match network password\n");
                 memcpy(out->network.pass, itr.pay+1, itr.len-1);
+                printf("debug pass:%s\n", out->network.pass);
                 continue;
             }
         }
@@ -394,12 +486,6 @@ void retrieve_networking_config(const uint8_t *mac, network_setup *out) {
         printf("debug config_length %d\n",config_length);
         write_config(config, config_length);
 
-        for (int i = 0; i < config_length; i++) {
-            printf("%02X", config[i]);
-            printf(" ");
-        }
-        printf("\n");
-
         uint8_t secrets[SECURE_FLASH_SIZE];
         size_t secrets_length = wrap_secrets(secrets, name, mac);
         printf("debug secrets_length %d\n",secrets_length);
@@ -418,6 +504,12 @@ void retrieve_networking_config(const uint8_t *mac, network_setup *out) {
     uint8_t config_buffer[FLASH_SIZE];
     read_config(config_buffer,data_length+3);
     printf("retrieved config (%d bytes) from rom\n", data_length);
+
+    for (int i = 0; i < data_length+3; i++) {
+        printf("%02X", config_buffer[i]);
+        printf(" ");
+    }
+    printf("\n");
 
     unmarshal_network_config(config_buffer+3,data_length,mac,out);
 

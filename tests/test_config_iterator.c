@@ -21,7 +21,6 @@ void test_config_iterator_message_exist(void)
     config_element_iterator it3;
     config_element_iterator_init(&it3, buffer3, sizeof(buffer3));
     TEST_ASSERT_FALSE(it3.has_next(&it3));
-
 }
 
 void test_config_iterator_detects_message(void)
@@ -61,6 +60,23 @@ void test_config_iterator_multi_message(void)
     TEST_ASSERT_FALSE(it.next(&it));
 }
 
+void test_config_iterator_reset(void)
+{
+    uint8_t buffer[] = {
+        0x01, 0x00, 0x00, 0x01, 0x02, 0xAA, 0xBB
+    };
+
+    config_element_iterator it;
+
+    config_element_iterator_init(&it, buffer, sizeof(buffer));
+
+    TEST_ASSERT_TRUE(it.next(&it));
+    TEST_ASSERT_FALSE(it.next(&it));
+    it.reset(&it);
+    TEST_ASSERT_TRUE(it.next(&it));
+    TEST_ASSERT_FALSE(it.next(&it));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -68,6 +84,7 @@ int main(void)
     RUN_TEST(test_config_iterator_message_exist);
     RUN_TEST(test_config_iterator_detects_message);
     RUN_TEST(test_config_iterator_multi_message);
+    RUN_TEST(test_config_iterator_reset);
 
     return UNITY_END();
 }

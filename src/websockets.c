@@ -258,9 +258,11 @@ err_t handle_websocket_msg(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_
         // printf("length: %i, Data: %X\n", data_length,*payload);
 
         if (*payload == 0x0A) {
-            apply_store(payload,data_length);
+            apply_config(payload,data_length+3);
         } else if (*payload == 0x0B) {
-            update_store(payload+3,data_length);
+            update_config(payload+3,data_length);
+        } else if (*payload == 0x0C) {
+            update_secrets(payload+3,data_length);
         } else if (*payload == 0x01) {
             uint32_t value = *(payload+3) << 24
                 | *(payload+4) << 16

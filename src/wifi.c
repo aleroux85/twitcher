@@ -16,8 +16,10 @@
 #define RETRY_DELAY_MS 5000
 
 // WiFi credentials - replace with your own
-#define WIFI_SSID "RMC"
-#define WIFI_PASSWORD "password"
+// #define WIFI_SSID "RMC"
+// #define WIFI_PASSWORD "password"
+#define WIFI_SSID "LRX"
+#define WIFI_PASSWORD "47353749"
 
 void print_wifi_status(int status_code) {
     printf("WiFi status code: %d - ", status_code);
@@ -63,6 +65,11 @@ void create_wifi_access_point(const network_config nc) {
 
 int create_network(const uint8_t *mac) {
     network_setup ns;
+    memset(ns.device.name, 0, sizeof(ns.device.name));
+    memset(ns.network.name, 0, sizeof(ns.network.name));
+    memset(ns.network.ssid, 0, sizeof(ns.network.ssid));
+    memset(ns.network.pass, 0, sizeof(ns.network.pass));
+
     retrieve_networking_config(mac, &ns);
 
     printf("\nMAC address: ");
@@ -78,7 +85,7 @@ int create_network(const uint8_t *mac) {
     // char name[] = "ABCD";
     if ((ns.network.opts&1) == 0) {
         printf("Create network access point\n");
-    create_wifi_access_point(ns.network);
+        create_wifi_access_point(ns.network);
     } else {
         printf("Connect to WiFi\n");
         return connect_to_wifi(ns.network);

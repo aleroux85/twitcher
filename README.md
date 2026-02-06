@@ -63,7 +63,7 @@ This builds a standalone version for local testing.
 If you have a hot reload server you can use `entr` to update all file if you made an update and get that reloaded.
 
 ```bash
-ls ui/content/*.* ui/content/components/* ui/layout.* | entr make test
+ls ui/content/*.* ui/content/components/* ui/layout.* | entr make uidev
 ```
 
 ---

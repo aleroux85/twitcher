@@ -3,7 +3,7 @@ include make/tpl.mk
 test: src/config/config_iterator.c tests/test_config_iterator.c tests/unity.c
 	gcc -std=c11 -Wall -Wextra -Werror -DUNIT_TEST -Isrc -Itests $^ -o test_runner
 
-run: test
+runtest: test
 	./test_runner
 
 uidev: ui/layout.html ui/dist/index.css ui/dist/index.js
@@ -11,21 +11,21 @@ uidev: ui/layout.html ui/dist/index.css ui/dist/index.js
 	$(call compose,ui/layout.html,make/html.map,ui/dist/index.html)
 	@echo "Built test version → ui/dist/index.html"
 
-hwdev: ui/layout.html ui/dist/index.css ui/dist/index.js
+hwdev: ui/layout.html ui/dist/index.css ui/dist/index.js $(wildcard src/*.c) $(wildcard src/*.h)
 	@mkdir -p ui/dist
 	sed -i 's/^const testing = true;/const testing = false;/' ui/dist/index.js
 	$(call compose,ui/layout.html,make/html.map,ui/dist/index.html)
 	gzip -k -9 -f ui/dist/index.html
-	xxd -i ui/dist/index.html.gz > ui_dist_index_html_gz.h
+	xxd -i ui/dist/index.html.gz > src/ui_dist_index_html_gz.h
 	cd build && cmake -DPICO_BOARD=pico2_w .. && $(MAKE)
 	@echo "Built test version → ui/dist/index.html"
 
-build: ui/layout.html ui/dist/index.css ui/dist/index.js $(wildcard *.c) $(wildcard *.h)
+build: ui/layout.html ui/dist/index.css ui/dist/index.js $(wildcard src/*.c) $(wildcard src/*.h)
 	@mkdir -p ui/dist
 	sed -i '/\/\/testing$$/d' ui/dist/index.js
 	$(call compose,ui/layout.html,make/html.map,ui/dist/index.html)
 	gzip -k -9 -f ui/dist/index.html
-	xxd -i ui/dist/index.html.gz > ui_dist_index_html_gz.h
+	xxd -i ui/dist/index.html.gz > src/ui_dist_index_html_gz.h
 	cd build && cmake -DPICO_BOARD=pico2_w .. && $(MAKE)
 	@echo "Built test version → ui/dist/index.html"
 
