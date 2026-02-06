@@ -10,12 +10,13 @@ pico_sdk_init()
 # __flash_settings_start = ORIGIN(flash) + LENGTH(flash) - 0x1000;
 
 add_executable(twitcher
-    main.c
-    wifi.c
-    tcpserver.c
-    websockets.c
-    config.c
-    hwman.c
+    src/main.c
+    src/wifi.c
+    src/tcpserver.c
+    src/websockets.c
+    src/config.c
+    src/config/config_iterator.c
+    src/hwman.c
 )
 
 target_compile_definitions(twitcher PRIVATE
@@ -24,6 +25,7 @@ target_compile_definitions(twitcher PRIVATE
 
 target_include_directories(twitcher PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}
+    ${CMAKE_CURRENT_LIST_DIR}/src
 )
 
 target_link_libraries(twitcher

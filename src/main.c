@@ -24,9 +24,11 @@ int main() {
     // Allow time for serial connection to establish
     sleep_ms(3000);
 
-    printf("\nRefraxtion modular robotics controller system\n");
-    printf("\non the Raspberry Pi Pico 2 W\n");
-    printf("SDK version: %s\n", PICO_SDK_VERSION_STRING);
+    printf("       ------------   --     ----\n");
+    printf("      |  neoGraph  | |  |   |    \n");
+    printf("------              -    ---     \n");
+    printf("  on Raspberry Pi Pico 2 W\n");
+    printf("\nSDK version: %s\n", PICO_SDK_VERSION_STRING);
     
     // Initialize the CYW43 architecture and the wireless chip
     printf("Initializing CYW43...\n");
@@ -38,26 +40,21 @@ int main() {
     printf("CYW43 initialized successfully\n");
     printf("System clock: %u Hz\n", clock_get_hz(clk_sys));
     
-    printf("MAC address: ");
-    for (int i = 0; i < 6; i++) {
-        printf("%02x", ((uint8_t *)netif_list->hwaddr)[i]);
-        if (i < 5) printf(":");
-    }
-    printf("\n");
-
     // Connecting to WiFi
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
-    create_wifi_access_point();
+    printf("\nStarting networking\n");
+    uint8_t *mac = netif_list->hwaddr;
+    int err = create_network(mac);
+    // create_wifi_access_point(name);
     // int err = connect_to_wifi(NULL,NULL,NULL);
     // int err = connect_to_wifi("192.168.43.158","255.255.255.0","192.168.43.1");
-    // if (err != 0) {
-    //     printf("here\n");
-    //     cyw43_arch_deinit();
-    //     return 1;
-    // }
+    if (err != 0) {
+        cyw43_arch_deinit();
+        return 1;
+    }
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
     
-    printf("(core0) launching core1\n");
+    printf("\n(core0) launching core1\n");
     multicore_launch_core1(core1_worker);
     
     tcpserver *state = tcp_server_init();

@@ -1,0 +1,333 @@
+let socket;
+
+function networkingTemplate(state) {
+    const editableField = (obj, type, field, label, nindex=-1, secret=false, dindex=-1) => {
+        const value = obj[field];
+        const editing = obj._editing === field;
+        const packettype = secret?0x0C:0x0B;
+        const callback = `updateNetworkFields(${packettype},${type}, ${nindex}, '${field}')`;
+
+        if (!editing) {
+            return `
+            <div class="editable">
+                <span class="label">${label}:</span>
+                <span class="value">${value}</span>
+                <svg onclick="networks[${nindex}]._draft='${value}';networks[${nindex}]._editing='${field}'" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="#BFCDE7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15.4998 5.49994L18.3282 8.32837M3 20.9997L3.04745 20.6675C3.21536 19.4922 3.29932 18.9045 3.49029 18.3558C3.65975 17.8689 3.89124 17.4059 4.17906 16.9783C4.50341 16.4963 4.92319 16.0765 5.76274 15.237L17.4107 3.58896C18.1918 2.80791 19.4581 2.80791 20.2392 3.58896C21.0202 4.37001 21.0202 5.63634 20.2392 6.41739L8.37744 18.2791C7.61579 19.0408 7.23497 19.4216 6.8012 19.7244C6.41618 19.9932 6.00093 20.2159 5.56398 20.3879C5.07171 20.5817 4.54375 20.6882 3.48793 20.9012L3 20.9997Z"/>
+                </svg>
+            </div>
+            `;
+        } else {
+            return `
+            <div class="editable">
+                <span class="label">${label}:</span>
+                <input id="input-${nindex}-${field}" value="${networks[nindex]._draft}" type="text" autofocus />
+                <svg onclick="networks[${nindex}]._editing='';networks[${nindex}]['${field}']=networks[${nindex}]._draft;${callback}" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="#BFCDE7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 12.6111L8.92308 17.5L20 6.5"/>
+                </svg>
+                <svg onclick="networks[${nindex}]._editing=''" viewBox="0 0 24 24" fill="none" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="#BFCDE7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 6L18 18M18 6L6 18"/>
+                </svg>
+            </div>
+            `;
+        }
+    }
+
+    const deviceElement = (nindex,dindex,device) => `
+        <div class="device-elm">
+            <div>
+                <h4>Device: ${device.name}</h4>
+                <p>IP: ${device.ip}</p>
+            </div>
+            <div class="device-connect" onclick="toggleWebSocket(${nindex},${dindex})">
+                <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path opacity="0.8" stroke="#BFCDE7" fill=${device.connected?"#4CAF5080":"#E7BFBF80"} stroke-width="1.5" d="M2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C22 4.92893 22 7.28595 22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12Z"/>
+                    <g transform="${device.connected?"translate(5.8 3) scale(0.745)":"translate(0 3) scale(0.745)"}">
+                        <path stroke="#BFCDE7" fill="#2d2f34C0" stroke-width="1.5" d="M6 8C6 5.17157 6 3.75736 6.87868 2.87868C7.75736 2 9.17157 2 12 2C14.8284 2 16.2426 2 17.1213 2.87868C18 3.75736 18 5.17157 18 8V16C18 18.8284 18 20.2426 17.1213 21.1213C16.2426 22 14.8284 22 12 22C9.17157 22 7.75736 22 6.87868 21.1213C6 20.2426 6 18.8284 6 16V8Z"/>
+                    </g>
+                </svg>
+            </div>
+        </div>
+    `;
+    
+    const networkElement = (nindex,network) => `
+        <div class="network-box">
+            <div class="network-attributes">
+                <div class="network-head">
+                    <h3>Network</h3>
+                    <div class="netconn-buttons">
+                        <div class="${network.options===0?"sel":"nosel"}" onclick="networks[${nindex}].options=networks[${nindex}].options&254;updateNetworkFields(0x0B,0xB2,${nindex},'options')">
+                            <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke="#BFCDE7C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 15V9M7.41604 11.0005C7.14845 10.388 7 9.71159 7 9.00049C7 7.87466 7.37209 6.83574 8 6M16.584 11.0005C16.8516 10.388 17 9.71159 17 9.00049C17 7.87466 16.6279 6.83574 16 6M18.7083 3C20.1334 4.59227 21 6.69494 21 9C21 9.68739 20.9229 10.3568 20.777 11M5.29168 3C3.86656 4.59227 3 6.69494 3 9C3 9.68739 3.07706 10.3568 3.22302 11M6 18H6.01M9 18H9.01M12 18H12.01M18 15.0001C18.9319 15.0001 19.3978 15 19.7654 15.1522C20.2554 15.3552 20.6448 15.7446 20.8478 16.2346C21 16.6022 21 17.0681 21 18C21 18.9319 21 19.3978 20.8478 19.7654C20.6448 20.2554 20.2554 20.6448 19.7654 20.8478C19.3978 21 18.9319 21 18 21H6C5.06812 21 4.60218 21 4.23463 20.8478C3.74458 20.6448 3.35523 20.2554 3.15224 19.7654C3 19.3978 3 18.9319 3 18C3 17.0681 3 16.6022 3.15224 16.2346C3.35523 15.7446 3.74458 15.3552 4.23463 15.1522C4.59855 15.0015 5.05894 15 5.97256 15C9.98171 15 13.9909 15 18 15.0001Z"/>
+                            </svg>
+                        </div>
+                        <div class="${network.options===1?"sel":"nosel"}" onclick="networks[${nindex}].options=networks[${nindex}].options|1;updateNetworkFields(0x0B,0xB2,${nindex},'options')">
+                            <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path transform="rotate(180) translate(-24 -24)" stroke="#BFCDE7C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 21H6.2C5.0799 21 4.51984 21 4.09202 20.782C3.71569 20.5903 3.40973 20.2843 3.21799 19.908C3 19.4802 3 18.9201 3 17.8V6.2C3 5.0799 3 4.51984 3.21799 4.09202C3.40973 3.71569 3.71569 3.40973 4.09202 3.21799C4.51984 3 5.0799 3 6.2 3H11.8C12.9201 3 13.4802 3 13.908 3.21799C14.2843 3.40973 14.5903 3.71569 14.782 4.09202C15 4.51984 15 5.0799 15 6.2V10M21 21H21.01M8 6H10M17 21C17 18.7909 18.7909 17 21 17M13 21C13 16.5817 16.5817 13 21 13"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    ${editableField(network,0xB3,"name","Name",nindex)}
+                    ${editableField(network,0xB3,"ssid","SSID",nindex)}
+                    ${editableField(network,0xB3,"password","Password",nindex,true)}
+                </div>
+            </div>
+            <div class="device-box">
+                ${network.devices.map((device,dindex) => deviceElement(nindex,dindex,device))}
+            </div>
+        </div>
+    `;
+
+    return `${state.map((network,nindex) => networkElement(nindex,network)).join("")}`;
+}
+
+const networks = mount(document.getElementById("network"), [
+    {
+        name:"unknown",
+        ssid:"unknown",
+        password:"••••••••",
+        options:0,
+        devices:[
+            {
+                name:"unknown",
+                mac:new Uint8Array([0x64, 0x00, 0x84, 0xfe, 0x18, 0x07]),
+                ip:location.host,
+                connected:false,
+                socket:null
+            }
+        ],
+        fields:{options:0, name:1, ssid:2, password:3}
+    }
+], networkingTemplate);
+
+// function updateNetworkOptions(netID) {
+//     const data = new Uint8Array([0x0B, 0, 7, 0xB2, 0, (netID >> 8) & 0xFF, netID & 0xFF, 2, 0, networks[netID].options]);
+//     if (!testing) {  //testing
+//     socket.send(data);
+//     } else { //testing
+//         console.log(data); //testing
+//     } //testing
+// }
+
+function updateNetworkFields(pt,type,netID,field) {
+    const encoder = new TextEncoder();
+
+    const value = [];
+    if (typeof(networks[netID][field]) == "number") {
+        value.push(networks[netID][field]);
+    } else if (typeof(networks[netID][field]) == "string") {
+        value.push(...encoder.encode(networks[netID][field]));
+    }
+
+    const pcktlen = 5 + 1 + value.length;
+
+    const data = new Uint8Array([pt, 0, pcktlen, type, 0, (netID >> 8) & 0xFF, netID & 0xFF, value.length + 1, networks[netID].fields[field], ...value]);
+    if (!testing) {  //testing
+    socket.send(data);
+    } else { //testing
+        console.log(data); //testing
+    } //testing
+}
+
+function toggleWebSocket(n,d) {
+    const dv = networks[n].devices[d];
+    if (dv.connected) {
+        dv.connected = false;
+        if (!testing) { //testing
+        disconnectWebSocket(networks[n].devices[d]);
+        } //testing
+    } else {
+        dv.connected = true;
+        if (!testing) {  //testing
+        connectWebSocket(networks[n].devices[d]);
+        } else { //testing
+            const data = new Uint8Array([ //testing
+                0xb0, 0x00, 0x00, 0x00, 0x07, 0x00, 0x64, 0x00, 0x84, 0xfe, 0x18, 0x07, 0xb1, 0x00, 0x00, 0x00, //testing
+                0x06, 0x01, 0x49, 0x4a, 0x54, 0x54, 0x00, 0xb1, 0x00, 0x00, 0x00, 0x03, 0x02, 0x00, 0x00, 0xb2, //testing
+                0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xb3, 0x00, 0x00, 0x00, 0x06, 0x01, 0x49, 0x4a, 0x54, 0x54, 0x00, 0xb3, //testing
+                0x00, 0x00, 0x00, 0x0f, 0x02, 0x6e, 0x65, 0x6f, 0x47, 0x72, 0x61, 0x70, 0x68, 0x2d, 0x49, 0x4a, //testing
+                0x54, 0x54, 0x00]); //testing
+            unmarshalConfigs(data); //testing
+        } //testing
+    }
+}
+
+function unmarshalConfigs(binary) {
+    const decoder = new TextDecoder();
+    const view = new DataView(binary.buffer, binary.byteOffset, binary.byteLength);
+    const configs = {};
+    let offset = 0;
+
+    while (offset < binary.length) {
+        let elm = {};
+
+        const type = view.getUint8(offset++);
+        offset++;
+        elm.id = view.getUint16(offset); offset += 2;
+        elm.len = view.getUint8(offset++);
+        elm.pay = binary.slice(offset,offset+elm.len); offset += elm.len;
+
+        if (!configs.hasOwnProperty(type)) {
+            configs[type] = [];
+        }
+
+        configs[type].push(elm);
+    }
+
+    for (const device of configs[0xB0]) {
+        const mac = networks[0].devices[0].mac;
+        let netId = -1;
+
+        if (areByteArraysEqual(device.pay.slice(1), mac)) {
+            const devId = device.id;
+
+            let iElm = 0;
+            while (iElm < configs[0xB1].length) {
+                const devParam = configs[0xB1][iElm];
+                if (devParam.id !== devId) {
+                    iElm++;
+                    continue;
+                }
+
+                const field = devParam.pay[0];
+                switch (field) {
+                    case 0x01:
+                        networks[0].devices[0].name = decoder.decode(devParam.pay.slice(1));
+                        break;
+                
+                    case 0x02:
+                        netId = devParam.pay[1] << 8 || devParam.pay[2];
+                        break;
+                
+                    default:
+                        break;
+                }
+
+                configs[0xB1].splice(iElm,1);
+            }
+
+            iElm = 0;
+            while (iElm < configs[0xB2].length) {
+                const netParam = configs[0xB2][iElm];
+                if (netParam.id !== netId) {
+                    iElm++;
+                    continue;
+                }
+
+                const field = netParam.pay[0];
+                switch (field) {
+                    case 0x00:
+                        networks[0].options = netParam.pay[1];
+                        break;
+                
+                    default:
+                        break;
+                }
+
+                configs[0xB2].splice(iElm,1);
+            }
+
+            iElm = 0;
+            while (iElm < configs[0xB3].length) {
+                const netParam = configs[0xB3][iElm];
+                if (netParam.id !== netId) {
+                    iElm++;
+                    continue;
+                }
+
+                const field = netParam.pay[0];
+                switch (field) {
+                    case 0x01:
+                        networks[0].name = decoder.decode(netParam.pay.slice(1));
+                        break;
+                
+                    case 0x02:
+                        networks[0].ssid = decoder.decode(netParam.pay.slice(1));
+                        break;
+                
+                    default:
+                        break;
+                }
+
+                configs[0xB3].splice(iElm,1);
+            }
+        }
+    }
+}
+
+function areByteArraysEqual(arr1, arr2) {
+  return arr1.length === arr2.length && arr1.every((value, index) => value === arr2[index]);
+}
+
+function connectWebSocket(device) {
+    // const socket = device.socket;
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        console.log("WebSocket already connected.");
+        return;
+    }
+
+    socket = new WebSocket("ws://" + device.ip);
+
+    socket.onopen = function () {
+        // document.getElementById("status").textContent = "Connected";
+        // document.getElementById("status").className = "connected";
+        console.log("WebSocket connected.");
+    };
+
+    socket.binaryType = "arraybuffer";
+    socket.onmessage = (event) => {
+        if (event.data instanceof ArrayBuffer) {
+            const data = new Uint8Array(event.data);
+            console.log("Received binary data:", data);
+
+            if (data[0] === 0x0A) {
+                unmarshalConfigs(data.slice(3));
+                // console.log(config);
+                // reconstructConfigInterface(config);
+                // buildInterface(config);
+            }
+
+        } else {
+            // console.log("Received text data:", event.data);
+            // if (event.data.startsWith("core ")) {
+            //     document.getElementById("core").innerText = event.data.substring(5) + "°C";
+            // }
+
+            // if (event.data.startsWith("uptime ")) {
+            //     const uptime = parseInt(event.data.substring(7));
+            //     if (uptime < 60) {
+            //         document.getElementById("uptime").innerText = `${uptime} seconds`;
+            //     } else if (uptime < 3600) {
+            //         document.getElementById("uptime").innerText = `${Math.round(uptime / 60)}m${uptime % 60}s`;
+            //     } else {
+            //         document.getElementById("uptime").innerText = `${Math.round(uptime / 3600)}h${Math.round(uptime / 60) - 60 * Math.round(uptime / 3600)}m${uptime % 60}s`;
+            //     }
+            // }
+        }
+    };
+
+    socket.onclose = function () {
+        // document.getElementById("status").textContent = "Disconnected";
+        // document.getElementById("status").className = "disconnected";
+        // clearConfigInterface();
+        // clearControlInterface();
+        console.log("WebSocket disconnected.");
+    };
+
+    socket.onerror = function (error) {
+        console.error("WebSocket error:", error);
+    };
+}
+
+function disconnectWebSocket(device) {
+    // const socket = device.socket;
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.close();
+        // clearConfigInterface();
+        // clearControlInterface();
+    }
+}

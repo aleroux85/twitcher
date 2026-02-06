@@ -1,0 +1,6 @@
+{{layout-css}}:ui/dist/index.css
+{{network-html}}:ui/content/network.html
+{{command-html}}:ui/content/command.html
+{{graph-html}}:ui/content/graph.html
+{{settings-html}}:ui/content/settings.html
+{{layout-js}}:ui/dist/index.js

@@ -9,14 +9,17 @@
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
 #include "wifi.h"
+#include "config.h"
 
 // Connection retry parameters
 #define MAX_RETRIES 5
 #define RETRY_DELAY_MS 5000
 
 // WiFi credentials - replace with your own
-#define WIFI_SSID "RMC"
-#define WIFI_PASSWORD "password"
+// #define WIFI_SSID "RMC"
+// #define WIFI_PASSWORD "password"
+#define WIFI_SSID "LRX"
+#define WIFI_PASSWORD "47353749"
 
 void print_wifi_status(int status_code) {
     printf("WiFi status code: %d - ", status_code);
@@ -47,24 +50,58 @@ void print_wifi_status(int status_code) {
     }
 }
 
-void create_wifi_access_point() {
+void create_wifi_access_point(const network_config nc) {
 
-    printf("Starting AP...\n");
-    const char *ssid = "PicoHotspot";
-    const char *password = "pico1234";
+    printf("\nStarting access point...\n");
+    // const char *ssid = "neoGraph-";
+    // char ssid[16]; 
+    // snprintf(ssid, sizeof(ssid), "neoGraph-%s", name);
+    // const char *password = "neoGraph";
 
-    cyw43_arch_enable_ap_mode(ssid, password, CYW43_AUTH_WPA2_AES_PSK);
+    cyw43_arch_enable_ap_mode(nc.ssid, nc.pass, CYW43_AUTH_WPA2_AES_PSK);
 
-    printf("AP started with SSID: %s\n", ssid);
-    
-
+    printf("Access point started with SSID: %s\n", nc.ssid);
 }
 
-int connect_to_wifi(const char* static_ip, const char* static_netmask, const char* static_gateway) {
+int create_network(const uint8_t *mac) {
+    network_setup ns;
+    memset(ns.device.name, 0, sizeof(ns.device.name));
+    memset(ns.network.name, 0, sizeof(ns.network.name));
+    memset(ns.network.ssid, 0, sizeof(ns.network.ssid));
+    memset(ns.network.pass, 0, sizeof(ns.network.pass));
+
+    retrieve_networking_config(mac, &ns);
+
+    printf("\nMAC address: ");
+    for (int i = 0; i < 6; i++) {
+        printf("%02X", mac[i]);
+        if (i < 5) printf(":");
+    }
+    printf("\nDevice name: %s\n",ns.device.name);
+    printf("Network name: %s\n",ns.network.name);
+    printf("Network ssid: %s\n",ns.network.ssid);
+    printf("Network opts: %d\n",ns.network.opts);
+
+    // char name[] = "ABCD";
+    if ((ns.network.opts&1) == 0) {
+        printf("Create network access point\n");
+        create_wifi_access_point(ns.network);
+    } else {
+        printf("Connect to WiFi\n");
+        return connect_to_wifi(ns.network);
+    }
+    return 0;
+}
+
+int connect_to_wifi(const network_config nw) {
+    const char* static_ip = NULL;
+    const char* static_netmask = NULL;
+    const char* static_gateway = NULL;
+
     cyw43_arch_enable_sta_mode();
 
-    printf("Connecting to WiFi, SSID: %s\n", WIFI_SSID);
-    int result = cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 10000);
+    printf("Connecting to WiFi, SSID: %s\n", nw.ssid);
+    int result = cyw43_arch_wifi_connect_timeout_ms(nw.ssid, nw.pass, CYW43_AUTH_WPA2_AES_PSK, 10000);
     print_wifi_status(result);
 
     int retries = 0;
@@ -73,7 +110,7 @@ int connect_to_wifi(const char* static_ip, const char* static_netmask, const cha
         sleep_ms(RETRY_DELAY_MS);
 
         printf("Retrying connection (attempt %d of %d)...\n", retries + 1, MAX_RETRIES);
-        result = cyw43_arch_wifi_connect_timeout_ms(WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK, 10000);
+        result = cyw43_arch_wifi_connect_timeout_ms(nw.ssid, nw.pass, CYW43_AUTH_WPA2_AES_PSK, 10000);
         
         retries++;
     }
@@ -168,7 +205,6 @@ int connect_to_wifi(const char* static_ip, const char* static_netmask, const cha
             }
         }
     }
-    
     
     return 0;
 }

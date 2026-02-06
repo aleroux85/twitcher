@@ -1,0 +1,4 @@
+{{network-css}}:ui/content/network.css
+{{command-css}}:ui/content/command.css
+{{graph-css}}:ui/content/graph.css
+{{settings-css}}:ui/content/settings.css

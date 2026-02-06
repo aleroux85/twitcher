@@ -1,0 +1,125 @@
+.network-box {
+    padding: var(--step-1);
+    box-shadow: rgba(0, 0, 0, 0.4) 0px 4px 12px;
+    margin-top: var(--step-1);
+    background-color: var(--clr-pane);
+    color: var(--clr-face);
+}
+
+.network-box h3 {
+    margin-bottom: var(--step-1);
+}
+
+.network-box .editable {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--clr-face-fade);
+    padding: var(--step--5);
+    margin-bottom: var(--step--2);
+    width: var(--step-13);
+    /* height: var(--step-4); */
+}
+
+.network-box .editable > .label {
+    margin-right: var(--step--2);
+}
+
+.network-box .editable > .value {
+    margin-right: var(--step--2);
+    width: 100%;
+}
+
+.network-box .editable > input {
+    margin-right: var(--step--2);
+    width: 100%;
+}
+
+.network-box .editable > svg {
+    width: var(--step-2);
+    height: var(--step-2);
+    flex: 0 0 var(--step-4);
+    cursor: pointer;
+}
+
+.network-box .network-attributes {
+    /* width: var(--step-10);
+    height: var(--step-5); */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    margin-bottom: var(--step-1);
+}
+
+.network-box .network-attributes .network-head {
+    /* width: var(--step-10);
+    height: var(--step-5); */
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: var(--step-0);
+}
+
+.network-box .netconn-buttons {
+    /* width: var(--step-10);
+    height: var(--step-5); */
+    display: flex;
+    flex-direction: row;
+}
+
+.network-box .netconn-buttons > div {
+    height: var(--step-5);
+    border: 3px solid var(--clr-face);
+    border-radius: 100%;
+    padding: var(--step--3);
+    cursor: pointer;
+    margin-left: var(--step-0);
+}
+
+.network-box .netconn-buttons > div.sel {
+    background-color: var(--clr-green);
+}
+
+/* .network-box .netconn-buttons > div.nosel {
+    background-color: var(--clr-red);
+} */
+
+.network-box .device-box {
+    /* box-shadow: rgba(0, 0, 0, 0.4) 0px 4px 12px; */
+    /* margin-top: var(--step-1); */
+    background-color: var(--clr-pane);
+    color: var(--clr-face);
+    padding: var(--step-1);
+    border-top: 1px solid var(--clr-face);
+}
+
+.network-box .device-elm {
+    display: flex;
+    justify-content: space-between;
+
+}
+
+.network-box .device-box h4 {
+    margin-bottom: var(--step--2);
+}
+
+.network-box .device-box p {
+    margin: 0;
+}
+
+.network-box .device-connect {
+    height: var(--step-6);
+    padding: var(--step--3);
+}
+
+.network-box .device-connect > svg {
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .network-box .netconn-buttons > div {
+        height: var(--step-4);
+        border: 2px solid var(--clr-face);
+    }
+}
