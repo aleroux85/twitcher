@@ -1,9 +1,6 @@
 include make/tpl.mk
 
-test: src/config/config_iterator.c tests/test_config_iterator.c tests/unity.c
-	gcc -std=c11 -Wall -Wextra -Werror -DUNIT_TEST -Isrc -Itests $^ -o test_runner
-
-runtest: test
+test: unittest
 	./test_runner
 
 uidev: ui/layout.html ui/dist/index.css ui/dist/index.js
@@ -28,6 +25,9 @@ build: ui/layout.html ui/dist/index.css ui/dist/index.js $(wildcard src/*.c) $(w
 	xxd -i ui/dist/index.html.gz > src/ui_dist_index_html_gz.h
 	cd build && cmake -DPICO_BOARD=pico2_w .. && $(MAKE)
 	@echo "Built test version → ui/dist/index.html"
+
+unittest: src/config/config_iterator.c tests/test_config_iterator.c tests/unity.c
+	gcc -std=c11 -Wall -Wextra -Werror -DUNIT_TEST -Isrc -Itests $^ -o test_runner
 
 ui/dist/index.css: ui/layout.css ui/content/network.css ui/content/command.css ui/content/graph.css
 	@mkdir -p ui/dist

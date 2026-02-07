@@ -92,7 +92,6 @@ const networks = mount(document.getElementById("network"), [
         devices:[
             {
                 name:"unknown",
-                mac:new Uint8Array([0x64, 0x00, 0x84, 0xfe, 0x18, 0x07]),
                 ip:location.host,
                 connected:false,
                 socket:null
@@ -177,10 +176,10 @@ function unmarshalConfigs(binary) {
     }
 
     for (const device of configs[0xB0]) {
-        const mac = networks[0].devices[0].mac;
+        const did = networks[0].devices[0].did;
         let netId = -1;
 
-        if (areByteArraysEqual(device.pay.slice(1), mac)) {
+        if (areByteArraysEqual(device.pay.slice(1), did)) {
             const devId = device.id;
 
             let iElm = 0;
@@ -288,6 +287,9 @@ function connectWebSocket(device) {
                 // console.log(config);
                 // reconstructConfigInterface(config);
                 // buildInterface(config);
+            } else if (data[0] === 0x0D) {
+                console.log("got mac");
+                networks[0].devices[0].did = data.slice(3);
             }
 
         } else {

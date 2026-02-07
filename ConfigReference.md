@@ -33,13 +33,16 @@ carrying packet, a data value packet or a command packet. The packet type is
 a single byte and always transmitted in the first byte.
 
 ```none
-+-----+------+----------------+
-| Dec | Hex  | Type           |
-+-----+------+----------------+
-|  1  | 0x01 | Command        |
-|  2  | 0x02 | Data Value     |
-| 10  | 0x0A | Configuration  |
-+-----+------+----------------+
++-----+------+-----------------------+--------------+
+| Dec | Hex  | Type                  | Use Messages |
++-----+------+-----------------------+--------------+
+|  1  | 0x01 | Command               | Yes          |
+|  2  | 0x02 | Data Value            | Yes          |
+| 10  | 0x0A | Configuration         | Yes          |
+| 11  | 0x0B | Update Config Field/s | Yes          |
+| 12  | 0x0C | Update Secret Field/s | Yes          |
+| 13  | 0x0D | Send HW DID to UI     | No           |
++-----+------+-----------------------+--------------+
 ```
 
 ## Messages
@@ -208,7 +211,7 @@ The 0xB1 message can be repeated to set every field of the example device "XYZ" 
 +-----+------+-----------------------------------------------+
 | Dec | Hex  | Type                                          |
 +-----+------+-----------------------------------------------+
-|  0  | 0x00 | MAC                                           |
+|  0  | 0x00 | DID - a unique Device ID                      |
 |  1  | 0x01 | Name                                          |
 |  2  | 0x02 | The Network Element ID this device is part of |
 +-----+------+-----------------------------------------------+
@@ -253,4 +256,18 @@ message = msg type, msg options, elm id, msg payload length, msg payload ;
 
 byte = digit, digit ;
 digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "A" | "B" | "C" | "D" | "E" | "F" ;
+```
+
+## Sending MAC
+
+After a websocket request have been established the hardware immediately send a its Device ID (DID) to the UI to associate it with an IP for future networking operations.
+
+```none
++---------+------------------+-------------------+
+|  Byte   |      Field       |    Description    |
++---------+------------------+-------------------+
+|   0     | Packet Type      | 1 byte — 0x0D     |
+| 1 – 2   | Payload Length   | 2 bytes — 0x06    |
+| 3 – 10  | DID              | 8 bytes           |
++---------+------------------+-------------------+
 ```

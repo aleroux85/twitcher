@@ -5,6 +5,7 @@
 
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
+#include "pico/unique_id.h"
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
 #include "websockets.h"
@@ -195,11 +196,15 @@ err_t handle_websocket_req(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_
 
     pbuf_free(p);
 
-    // 1:{type: 1, target: 3, name: 2}
-    // 2:{type: 160, string: 'Button'}
-    // 3:{type: 48}
-    // uint8_t config[] = {10, 0, 23, 1, 0, 0, 1, 2, 0, 2, 160, 0, 0, 2, 6, 66, 117, 116, 116, 111, 110, 48, 0, 0, 3, 0};
-    uint8_t config[0x10000];
+    pico_unique_board_id_t board_id;
+    pico_get_unique_board_id(&board_id);
+
+    uint8_t did_packet[3+PICO_UNIQUE_BOARD_ID_SIZE_BYTES];
+    did_packet[0] = 0x0D; did_packet[1] = 0x00; did_packet[2] = PICO_UNIQUE_BOARD_ID_SIZE_BYTES;
+    memcpy(did_packet+3, board_id.id, PICO_UNIQUE_BOARD_ID_SIZE_BYTES);
+    send_websocket_binary(clientstate, did_packet, 3+PICO_UNIQUE_BOARD_ID_SIZE_BYTES);
+
+    uint8_t config[FLASH_SIZE];
     // uint16_t config_length = 23;
     uint16_t config_length = retrieve_store(config);
     // uint8_t config_msg[config_length+7];

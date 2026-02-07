@@ -5,22 +5,16 @@
 
 #include "pico/stdlib.h"
 #include "pico/flash.h"
-#include "hardware/flash.h"
+// #include "pico/unique_id.h"
 #include "pico/multicore.h"
+#include "hardware/flash.h"
 #include "config.h"
-// #include "wifi.h"
 #include "config/config_iterator.h"
 
 #define PREFIX "neoGraph-"
 #define PREFIX_LEN 9
 #define NAME_LEN   4
 #define MAC_LEN    6
-
-#define FLASH_SIZE 0x1000
-#define SECURE_FLASH_SIZE 0x100
-
-#define FLASH_TARGET_OFFSET (PICO_FLASH_SIZE_BYTES - FLASH_SIZE)
-#define SECURE_FLASH_TARGET_OFFSET (PICO_FLASH_SIZE_BYTES - FLASH_SIZE - SECURE_FLASH_SIZE)
 
 void read_secrets(uint8_t* buffer, size_t len) {
     const uint8_t *flash_target_contents = (const uint8_t *)(XIP_BASE + SECURE_FLASH_TARGET_OFFSET);
@@ -57,7 +51,7 @@ bool next_config_element(config_element_iterator *elms) {
 }
 
 void write_secrets(const uint8_t* data, size_t length) {
-    printf("storing config to rom\n");
+    printf("storing secrets to rom\n");
     uint32_t ints = save_and_disable_interrupts();
 
     flash_range_erase(SECURE_FLASH_TARGET_OFFSET, SECURE_FLASH_SIZE);
@@ -213,11 +207,14 @@ void update_config(const uint8_t* new_buf, size_t new_len) {
     printf("done updating config\n");
 }
 
-void mac_to_name(const uint8_t mac[6], char out[5]) {
-    // Simple 32-bit hash from the 6 MAC bytes
+void device_name(char out[5]) {
+    pico_unique_board_id_t board_id;
+    pico_get_unique_board_id(&board_id);
+
+    // Simple 32-bit hash from the device ID bytes
     uint32_t hash = 0x811C9DC5; // FNV-1a offset basis
-    for (int i = 0; i < 6; i++) {
-        hash ^= mac[i];
+    for (int i = 0; i < PICO_UNIQUE_BOARD_ID_SIZE_BYTES; i++) {
+        hash ^= board_id.id[i];
         hash *= 0x01000193; // FNV-1a prime
     }
 
@@ -234,7 +231,7 @@ void mac_to_name(const uint8_t mac[6], char out[5]) {
     out[4] = '\0';
 }
 
-size_t build_secrets(uint8_t *buf, const char name[5], const uint8_t *mac) {
+size_t build_secrets(uint8_t *buf, const char name[5]) {
     uint8_t *p = buf;
 
     // --- 0xB3 block #2 ---
@@ -255,18 +252,21 @@ size_t build_secrets(uint8_t *buf, const char name[5], const uint8_t *mac) {
     return (size_t)(p - buf);
 }
 
-size_t build_config(uint8_t *buf, const char name[5], const uint8_t *mac) {
+size_t build_config(uint8_t *buf, const char name[5]) {
     uint8_t *p = buf;
+
+    pico_unique_board_id_t board_id;
+    pico_get_unique_board_id(&board_id);
 
     // --- 0xB0 block ---
     *p++ = 0xB0;
     *p++ = 0x00; // reserved
     *p++ = 0x00; // elm ID H
     *p++ = 0x00; // elm ID L
-    *p++ = 0x07; // elm Len
-    *p++ = 0x00; // field 0x00=mac
-    memcpy(p, mac, MAC_LEN);
-    p += MAC_LEN;
+    *p++ = PICO_UNIQUE_BOARD_ID_SIZE_BYTES+1; // elm Len
+    *p++ = 0x00; // field 0x00=deviceID
+    memcpy(p, board_id.id, PICO_UNIQUE_BOARD_ID_SIZE_BYTES);
+    p += PICO_UNIQUE_BOARD_ID_SIZE_BYTES;
 
     // --- 0xB1 block #1 ---
     *p++ = 0xB1;
@@ -325,9 +325,9 @@ size_t build_config(uint8_t *buf, const char name[5], const uint8_t *mac) {
     return (size_t)(p - buf);
 }
 
-size_t wrap_secrets(uint8_t *out, const char name[5], const uint8_t *mac) {
+size_t wrap_secrets(uint8_t *out, const char name[5]) {
     uint8_t inner[SECURE_FLASH_SIZE];
-    size_t inner_len = build_secrets(inner, name, mac);
+    size_t inner_len = build_secrets(inner, name);
 
     uint8_t *p = out;
 
@@ -340,9 +340,9 @@ size_t wrap_secrets(uint8_t *out, const char name[5], const uint8_t *mac) {
     return (size_t)(p - out);
 }
 
-size_t wrap_config(uint8_t *out, const char name[5], const uint8_t *mac) {
+size_t wrap_config(uint8_t *out, const char name[5]) {
     uint8_t inner[FLASH_SIZE];
-    size_t inner_len = build_config(inner, name, mac);
+    size_t inner_len = build_config(inner, name);
 
     uint8_t *p = out;
 
@@ -358,7 +358,7 @@ size_t wrap_config(uint8_t *out, const char name[5], const uint8_t *mac) {
 int unmarshal_network_config(
     uint8_t *data,
     size_t length, 
-    const uint8_t *target_mac,
+    const uint8_t *target_did,
     network_setup *out
 ) {
     // memset(out->device.name, 0, sizeof(out->device.name));
@@ -378,9 +378,10 @@ int unmarshal_network_config(
     while (itr.next(&itr)) {
         if (itr.type == 0xB0) {
             printf("got B0\n");
-            if (memcmp(itr.pay+1, target_mac, MAC_LEN) == 0) {
-                printf("match MAC\n");
+            if (memcmp(itr.pay+1, target_did, PICO_UNIQUE_BOARD_ID_SIZE_BYTES) == 0) {
+                printf("match DID\n");
                 out->device.id = itr.id;
+                memcpy(out->device.did,itr.pay+1,PICO_UNIQUE_BOARD_ID_SIZE_BYTES);
                 break;
             }
         }
@@ -390,18 +391,18 @@ int unmarshal_network_config(
 
     while (itr.next(&itr)) {
         if (itr.type == 0xB1) {
-            printf("got B1\n");
+            // printf("got B1\n");
             if (itr.id != out->device.id) continue;
             uint8_t field_number = itr.pay[0];
             if (field_number == 0x01) {
-                printf("match device name\n");
+                // printf("match device name\n");
                 memcpy(out->device.name, itr.pay+1, itr.len-1);
-                printf("debug name:%s\n", out->device.name);
+                // printf("debug name:%s\n", out->device.name);
                 continue;
             }
 
             if (field_number == 0x02) {
-                printf("match device network\n");
+                // printf("match device network\n");
                 out->network.id = itr.pay[1]<<8 | itr.pay[2];
                 continue;
             }
@@ -412,14 +413,14 @@ int unmarshal_network_config(
 
     while (itr.next(&itr)) {
         if (itr.type == 0xB2) {
-            printf("got B2\n");
+            // printf("got B2\n");
             if (itr.id != out->network.id) continue;
             uint8_t field_number = itr.pay[0];
 
             if (field_number == 0x00) {
-                printf("match network opts\n");
+                // printf("match network opts\n");
                 out->network.opts = itr.pay[1];
-                printf("debug opts:%d\n", out->network.opts);
+                // printf("debug opts:%d\n", out->network.opts);
                 continue;
             }
         }
@@ -429,28 +430,28 @@ int unmarshal_network_config(
 
     while (itr.next(&itr)) {
         if (itr.type == 0xB3) {
-            printf("got B3\n");
+            // printf("got B3\n");
             if (itr.id != out->network.id) continue;
             uint8_t field_number = itr.pay[0];
 
             if (field_number == 0x01) {
-                printf("match network name\n");
+                // printf("match network name\n");
                 memcpy(out->network.name, itr.pay+1, itr.len-1);
-                printf("debug name:%s\n", out->network.name);
+                // printf("debug name:%s\n", out->network.name);
                 continue;
             }
 
             if (field_number == 0x02) {
-                printf("match network ssid\n");
+                // printf("match network ssid\n");
                 memcpy(out->network.ssid, itr.pay+1, itr.len-1);
-                printf("debug ssid:%s\n", out->network.ssid);
+                // printf("debug ssid:%s\n", out->network.ssid);
                 continue;
             }
 
             if (field_number == 0x03) {
-                printf("match network password\n");
+                // printf("match network password\n");
                 memcpy(out->network.pass, itr.pay+1, itr.len-1);
-                printf("debug pass:%s\n", out->network.pass);
+                // printf("debug pass:%s\n", out->network.pass);
                 continue;
             }
         }
@@ -469,7 +470,7 @@ void log_appendf(const char *fmt, ...) {
     va_end(args);
 }
 
-void retrieve_networking_config(const uint8_t *mac, network_setup *out) {
+void retrieve_networking_config(network_setup *out) {
     printf("reading networking config from rom\n");
     // uint32_t ints = save_and_disable_interrupts();
 
@@ -479,49 +480,58 @@ void retrieve_networking_config(const uint8_t *mac, network_setup *out) {
         printf("no networking config found, creating default config\n");
 
         char name[NAME_LEN+1];
-        mac_to_name(mac, name);
+        device_name(name);
 
         uint8_t config[FLASH_SIZE];
-        size_t config_length = wrap_config(config, name, mac);
-        printf("debug config_length %d\n",config_length);
+        size_t config_length = wrap_config(config, name);
+        // printf("debug config_length %d\n",config_length);
         write_config(config, config_length);
 
         uint8_t secrets[SECURE_FLASH_SIZE];
-        size_t secrets_length = wrap_secrets(secrets, name, mac);
-        printf("debug secrets_length %d\n",secrets_length);
+        size_t secrets_length = wrap_secrets(secrets, name);
+        // printf("debug secrets_length %d\n",secrets_length);
         write_secrets(secrets, secrets_length);
 
-        for (int i = 0; i < secrets_length; i++) {
-            printf("%02X", secrets[i]);
-            printf(" ");
-        }
-        printf("\n");
+        // for (int i = 0; i < secrets_length; i++) {
+        //     printf("%02X", secrets[i]);
+        //     printf(" ");
+        // }
+        // printf("\n");
     }
+    pico_unique_board_id_t board_id;
+    pico_get_unique_board_id(&board_id);
+
+    // printf("\nDevice ID: ");
+    // for (int i = 0; i < PICO_UNIQUE_BOARD_ID_SIZE_BYTES; i++) {
+    //     printf("%02X", board_id.id[i]);
+    //     if (i < PICO_UNIQUE_BOARD_ID_SIZE_BYTES-1) printf(" ");
+    // }
+
     read_config(header_buffer,3);
     uint16_t data_length = (header_buffer[1] << 8) | header_buffer[2];
-    printf("debug: header %02X %02X %02X length %d \n",header_buffer[0],header_buffer[1],header_buffer[2],data_length);
+    // printf("debug: header %02X %02X %02X length %d \n",header_buffer[0],header_buffer[1],header_buffer[2],data_length);
 
     uint8_t config_buffer[FLASH_SIZE];
     read_config(config_buffer,data_length+3);
-    printf("retrieved config (%d bytes) from rom\n", data_length);
+    // printf("retrieved config (%d bytes) from rom\n", data_length);
 
-    for (int i = 0; i < data_length+3; i++) {
-        printf("%02X", config_buffer[i]);
-        printf(" ");
-    }
-    printf("\n");
+    // for (int i = 0; i < data_length+3; i++) {
+    //     printf("%02X", config_buffer[i]);
+    //     printf(" ");
+    // }
+    // printf("\n");
 
-    unmarshal_network_config(config_buffer+3,data_length,mac,out);
+    unmarshal_network_config(config_buffer+3,data_length,board_id.id,out);
 
     read_secrets(header_buffer,3);
     data_length = (header_buffer[1] << 8) | header_buffer[2];
-    printf("debug: header %02X %02X %02X length %d \n",header_buffer[0],header_buffer[1],header_buffer[2],data_length);
+    // printf("debug: header %02X %02X %02X length %d \n",header_buffer[0],header_buffer[1],header_buffer[2],data_length);
 
     uint8_t secrets_buffer[SECURE_FLASH_SIZE];
     read_secrets(secrets_buffer,data_length+3);
-    printf("retrieved secrets (%d bytes) from rom\n", data_length);
+    // printf("retrieved secrets (%d bytes) from rom\n", data_length);
 
-    unmarshal_network_config(secrets_buffer+3,data_length,mac,out);
+    unmarshal_network_config(secrets_buffer+3,data_length,board_id.id,out);
 }
 
 uint16_t retrieve_store(uint8_t* data_buffer) {

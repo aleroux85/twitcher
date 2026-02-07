@@ -24,13 +24,12 @@ int main() {
     // Allow time for serial connection to establish
     sleep_ms(3000);
 
-    printf("       ------------   --     ----\n");
+    printf("       ------------   --     --->\n");
     printf("      |  neoGraph  | |  |   |    \n");
     printf("------              -    ---     \n");
     printf("  on Raspberry Pi Pico 2 W\n");
     printf("\nSDK version: %s\n", PICO_SDK_VERSION_STRING);
     
-    // Initialize the CYW43 architecture and the wireless chip
     printf("Initializing CYW43...\n");
     if (cyw43_arch_init()) {
         printf("Failed to initialize CYW43 architecture\n");
@@ -40,14 +39,10 @@ int main() {
     printf("CYW43 initialized successfully\n");
     printf("System clock: %u Hz\n", clock_get_hz(clk_sys));
     
-    // Connecting to WiFi
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
     printf("\nStarting networking\n");
-    uint8_t *mac = netif_list->hwaddr;
-    int err = create_network(mac);
-    // create_wifi_access_point(name);
-    // int err = connect_to_wifi(NULL,NULL,NULL);
-    // int err = connect_to_wifi("192.168.43.158","255.255.255.0","192.168.43.1");
+
+    int err = create_network();
     if (err != 0) {
         cyw43_arch_deinit();
         return 1;

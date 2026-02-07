@@ -2,6 +2,7 @@
 #include <string.h>
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
+#include "pico/unique_id.h"
 #include "lwip/ip4_addr.h"
 #include "lwip/netif.h"
 #include "lwip/apps/lwiperf.h"
@@ -63,26 +64,26 @@ void create_wifi_access_point(const network_config nc) {
     printf("Access point started with SSID: %s\n", nc.ssid);
 }
 
-int create_network(const uint8_t *mac) {
+int create_network() {
     network_setup ns;
     memset(ns.device.name, 0, sizeof(ns.device.name));
     memset(ns.network.name, 0, sizeof(ns.network.name));
     memset(ns.network.ssid, 0, sizeof(ns.network.ssid));
     memset(ns.network.pass, 0, sizeof(ns.network.pass));
 
-    retrieve_networking_config(mac, &ns);
+    retrieve_networking_config(&ns);
 
-    printf("\nMAC address: ");
-    for (int i = 0; i < 6; i++) {
-        printf("%02X", mac[i]);
-        if (i < 5) printf(":");
+    printf("\nDevice ID: ");
+    for (int i = 0; i < PICO_UNIQUE_BOARD_ID_SIZE_BYTES; i++) {
+        printf("%02X", ns.device.did[i]);
+        if (i < PICO_UNIQUE_BOARD_ID_SIZE_BYTES-1) printf(" ");
     }
+
     printf("\nDevice name: %s\n",ns.device.name);
     printf("Network name: %s\n",ns.network.name);
     printf("Network ssid: %s\n",ns.network.ssid);
     printf("Network opts: %d\n",ns.network.opts);
 
-    // char name[] = "ABCD";
     if ((ns.network.opts&1) == 0) {
         printf("Create network access point\n");
         create_wifi_access_point(ns.network);
