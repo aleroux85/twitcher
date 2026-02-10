@@ -242,7 +242,6 @@ size_t build_secrets(uint8_t *buf, const char name[5]) {
     *p++ = 0x09; // elm Len
     *p++ = 0x03; // field 0x03=pass
     memcpy(p, "47353749", 8);
-    // memcpy(p, "6yxrrGcsp9#EnnV3", 16);
     // memcpy(p, "neoGraph", 8);
     p += 8;
     // memcpy(p, name, NAME_LEN);
@@ -319,7 +318,6 @@ size_t build_config(uint8_t *buf, const char name[5]) {
     // p += PREFIX_LEN;
     // memcpy(p, name, NAME_LEN);
     memcpy(p, "LRX", 3);
-    // memcpy(p, "Vodacom-9F1556", 14);
     p += 3;
 
     return (size_t)(p - buf);

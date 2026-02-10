@@ -17,6 +17,7 @@ add_executable(twitcher
     src/config.c
     src/config/config_iterator.c
     src/hwman.c
+    src/networking/dhcpserver.c
 )
 
 target_compile_definitions(twitcher PRIVATE

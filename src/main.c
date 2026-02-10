@@ -9,6 +9,7 @@
 #include "lwip/dhcp.h"
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
+
 #include "wifi.h"
 #include "tcpserver.h"
 #include "websockets.h"
@@ -39,10 +40,19 @@ int main() {
     printf("CYW43 initialized successfully\n");
     printf("System clock: %u Hz\n", clock_get_hz(clk_sys));
     
-    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
     printf("\nStarting networking\n");
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
 
-    int err = create_network();
+    tcpserver *state = tcp_server_init();
+    if (!state) {
+        printf("\nERROR failed to allocate server state\n");
+        return 1;
+    }
+    state->gw.addr = PP_HTONL(CYW43_DEFAULT_IP_AP_ADDRESS);
+
+    
+
+    int err = create_network(state);
     if (err != 0) {
         cyw43_arch_deinit();
         return 1;
@@ -52,10 +62,6 @@ int main() {
     printf("\n(core0) launching core1\n");
     multicore_launch_core1(core1_worker);
     
-    tcpserver *state = tcp_server_init();
-    if (!state) {
-        return 1;
-    }
     if (!tcp_server_open(state)) {
         tcp_server_result(state, -1);
         return 1;
@@ -105,6 +111,8 @@ int main() {
             }
         }
     }
+
+    tcp_server_close(state);
     free(state);
     
     // This part will never be reached in this simple example

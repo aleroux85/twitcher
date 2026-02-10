@@ -48,6 +48,7 @@
 // #define ETH_PAD_SIZE                2
 #define LWIP_CHKSUM_ALGORITHM       3
 #define LWIP_DHCP                   1
+#define LWIP_DHCPD                  1
 #define LWIP_IPV4                   1
 #define LWIP_IPV6                   0
 #define LWIP_TCP                    1

@@ -6,21 +6,17 @@
 #include "lwip/ip4_addr.h"
 #include "lwip/netif.h"
 #include "lwip/apps/lwiperf.h"
+#include "networking/dhcpserver.h"
 #include "lwip/dhcp.h"
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
+
 #include "wifi.h"
 #include "config.h"
 
 // Connection retry parameters
 #define MAX_RETRIES 5
 #define RETRY_DELAY_MS 5000
-
-// WiFi credentials - replace with your own
-// #define WIFI_SSID "RMC"
-// #define WIFI_PASSWORD "password"
-#define WIFI_SSID "LRX"
-#define WIFI_PASSWORD "47353749"
 
 void print_wifi_status(int status_code) {
     printf("WiFi status code: %d - ", status_code);
@@ -64,7 +60,7 @@ void create_wifi_access_point(const network_config nc) {
     printf("Access point started with SSID: %s\n", nc.ssid);
 }
 
-int create_network() {
+int create_network(tcpserver *state) {
     network_setup ns;
     memset(ns.device.name, 0, sizeof(ns.device.name));
     memset(ns.network.name, 0, sizeof(ns.network.name));
@@ -87,6 +83,15 @@ int create_network() {
     if ((ns.network.opts&1) == 0) {
         printf("Create network access point\n");
         create_wifi_access_point(ns.network);
+
+        // struct netif *ap_netif = &cyw43_state.netif[CYW43_ITF_AP];
+
+        // Start the dhcp server
+        ip4_addr_t mask;
+        mask.addr = PP_HTONL(CYW43_DEFAULT_IP_MASK);
+
+        // dhcp_server_init(&state->dhcp_server, ap_netif, &mask);
+        dhcp_server_init(&state->dhcp_server, &state->gw, &mask);
     } else {
         printf("Connect to WiFi\n");
         return connect_to_wifi(ns.network);

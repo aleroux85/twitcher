@@ -1,6 +1,8 @@
 #ifndef TCPSERVER_H_INCLUDED
 #define TCPSERVER_H_INCLUDED
 
+#include "networking/dhcpserver.h"
+
 #define BUF_SIZE 2048
 
 typedef struct tcpserver {
@@ -12,7 +14,9 @@ typedef struct tcpserver {
     // uint8_t buffer_recv[BUF_SIZE];
     int sent_len;
     int recv_len;
-    // int run_count;
+    
+    dhcp_server_t dhcp_server;
+    ip_addr_t gw;
 } tcpserver;
 
 typedef struct tcpclient {
