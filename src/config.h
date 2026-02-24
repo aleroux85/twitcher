@@ -39,9 +39,9 @@ typedef enum {
 } ConfigOpType;
 
 typedef enum {
-    CONTROL_TYPE_LED = 0x30,
-    CONTROL_TYPE_GPIO = 0x31,
-    CONTROL_TYPE_PWM = 0x32
+    CONTROL_TYPE_LED = 0x20,
+    CONTROL_TYPE_GPIO = 0x21,
+    CONTROL_TYPE_PWM = 0x22
 } PayloadType;
 
 typedef struct {
@@ -58,23 +58,7 @@ typedef struct {
     };
 } Control;
 
-// typedef struct {
-//     const uint8_t *buf;
-//     uint8_t *pay;
-//     size_t pos;
-//     size_t size;
-//     uint8_t type;
-//     uint16_t id;
-//     uint8_t len;
-// } config_element_iterator;
-
-// typedef struct {
-//     Control* controls;
-//     size_t count;
-// } ControlList;
-
 void retrieve_networking_config(network_setup *out);
-void unmarshal_controls(const uint8_t* data, size_t length);
 void apply_config(const uint8_t* data, size_t length);
 void update_config(const uint8_t* new_val, size_t new_len);
 void update_secrets(const uint8_t* new_val, size_t new_len);

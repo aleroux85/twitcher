@@ -15,6 +15,7 @@ let wireMode = false;
 
 function saveGraph() {
     commandInterface = document.getElementById('command');
+    commandInterface.innerHTML = '';
 
     const output = [];
 
@@ -24,14 +25,16 @@ function saveGraph() {
     })
 
     const binary = Uint8Array.from(output);
-    const wsConfigMsg = new Uint8Array(binary.length + 3);
+    const wsConfigMsg = new Uint8Array(3 + gfig.length + binary.length);
     wsConfigMsg[0] = 0x0A;
-    wsConfigMsg[1] = (binary.length >> 8) & 0xFF;
-    wsConfigMsg[2] = binary.length & 0xFF;
-    wsConfigMsg.set(binary, 3);
+    wsConfigMsg[1] = (gfig.length + binary.length >> 8) & 0xFF;
+    wsConfigMsg[2] = gfig.length + binary.length & 0xFF;
+    wsConfigMsg.set(gfig, 3);
+    wsConfigMsg.set(binary, 3 + gfig.length);
 
-    if (debug) {console.log(wsConfigMsg)} //testing
-    if (!testing) { //testing
+    if (testing) { //testing
+        console.log(wsConfigMsg) //testing
+    } else { //testing
     socket.send(wsConfigMsg);
     } //testing
 }
@@ -93,7 +96,7 @@ function createEdge(id1,id2) {
     let el2 = elements[id2];
 
     if (el1.actDir === "inputs") {
-        el1,el2 = el2,el1;
+        [el1,el2] = [el2,el1];
     }
 
     const dx = el2.x - el1.x;
@@ -164,11 +167,11 @@ function selectById(id) {
     if (id === null) {
         selected = null;
     } else {
-        if (elements[id].marked) {
-            createEdge(selected.id, id);
+        if (elements['n'+id].marked) {
+            createEdge(selected.name, 'n'+id);
         }
 
-        selected = elements[id];
+        selected = elements['n'+id];
         selected.id = id;
     }
     // updatePropsPanel();
@@ -181,7 +184,7 @@ function highlightSelection() {
     let connType = 'bool';
 
     if (selected && wireMode) {
-        let elc = elements[selected.id];
+        let elc = elements['n'+selected.id];
 
         if (!elc[elc.actDir][elc.actNum].connected) {
             connect = true;
@@ -197,7 +200,7 @@ function highlightSelection() {
             return;
         }
 
-        if (key === selected.id) {
+        if (key === selected.name) {
             elm.highlight('select');
         } else {
             if (connect) {
@@ -223,6 +226,8 @@ function highlightSelection() {
 //     orig: { x: 0, y: 0 }
 // };
 
+// converts mouse coordinates from screen/browser coordinates
+// to SVG coordinate space.
 function svgPoint(evt) {
     const pt = svg.createSVGPoint();
     pt.x = evt.clientX;
@@ -297,4 +302,4 @@ new uiLed(100, 40);
 
 // toGraph();
 
-createEdge("n1","n2")
+createEdge("n2","n1")

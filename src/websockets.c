@@ -8,12 +8,14 @@
 #include "pico/unique_id.h"
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
-#include "websockets.h"
 #include "lwip/sockets.h"
-#include "tcpserver.h"
-#include "config.h"
 #include "mbedtls/sha1.h"
 #include "pico/multicore.h"
+
+#include "websockets.h"
+#include "tcpserver.h"
+#include "config.h"
+#include "config/config_iterator.h"
 
 void compute_websocket_accept(const char *client_key, char *accept_key) {
     const char *websocket_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -220,19 +222,19 @@ err_t handle_websocket_req(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_
 
 err_t handle_websocket_msg(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
     tcpclient *clientstate = (tcpclient*)arg;
-    // ControlList *cl = (ControlList *)clientstate->cl;
 
     // printf("tcp_server_recv %d bytes, err %d\n", p->tot_len, err);
     uint8_t buffer[1024];
     pbuf_copy_partial(p, buffer, sizeof(buffer) - 1, 0);
-    buffer[p->tot_len] = '\0';  // Ensure null termination
-    // printf("%s\n",buffer);
-    tcp_recved(tpcb, p->tot_len);  // Notify lwIP that data is received
+    buffer[p->tot_len] = '\0';
+    tcp_recved(tpcb, p->tot_len);
+
     // Extract WebSocket frame header
     uint8_t fin = buffer[0] >> 7;
     uint8_t opcode = buffer[0] & 0x0F;
     uint8_t masked = buffer[1] >> 7;
     uint64_t payload_length = buffer[1] & 0x7F;
+
     int header_size = 2;
     if (payload_length == 126) {
         payload_length = (buffer[2] << 8) | buffer[3];
@@ -244,17 +246,15 @@ err_t handle_websocket_msg(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_
         }
         header_size += 8;
     }
+
     if (masked) {
         uint8_t mask[4];
         memcpy(mask, buffer + header_size, 4);
         header_size += 4;
-        // Unmask payload
         unmask_payload(buffer + header_size, payload_length, mask);
     }
-    buffer[header_size + payload_length] = '\0';  // Null-terminate the payload
+    buffer[header_size + payload_length] = '\0';
 
-    // printf("Received WebSocket Message: %s\n", buffer + header_size);
-    // Handle different opcodes
     if (opcode == 0x1) {  // Text frame
         printf("Text Message: %s\n", buffer + header_size);
     } else if (opcode == 0x2) {  // Binary frame
@@ -269,20 +269,27 @@ err_t handle_websocket_msg(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_
         } else if (*payload == 0x0C) {
             update_secrets(payload+3,data_length);
         } else if (*payload == 0x01) {
-            uint32_t value = *(payload+3) << 24
-                | *(payload+4) << 16
-                | *(payload+5) << 8
-                | *(payload+6);
+            config_element_iterator itr;
+            config_element_iterator_init(&itr, payload+3, data_length);
+            
+            uint32_t value = 1 << 24;
             multicore_fifo_push_blocking(value);
-            uint8_t nValues = *(payload+4);
-            for (size_t iValue = 0; iValue < nValues; iValue++) {
-                // printf("value %i [%X %X %X %X]\n", iValue, *(payload+(7+iValue*4)), *(payload+(8+iValue*4)), *(payload+(9+iValue*4)), *(payload+(10+iValue*4)));
-                uint32_t value = *(payload+(7+iValue*4)) << 24
-                    | *(payload+(8+iValue*4)) << 16
-                    | *(payload+(9+iValue*4)) << 8
-                    | *(payload+(10+iValue*4));
 
+            while (itr.next(&itr)) {
+                // printf("value %i [%X %X %X %X]\n", iValue, *(payload+(7+iValue*4)), *(payload+(8+iValue*4)), *(payload+(9+iValue*4)), *(payload+(10+iValue*4)));
+                uint32_t value = itr.type << 24
+                    | (itr.id>>8 & 0xFF) << 16
+                    | (itr.id>>0 & 0xFF) << 8
+                    | itr.pay[0];
                 multicore_fifo_push_blocking(value);
+
+                for (size_t i = 1; i < itr.len; i+=4) {
+                    uint32_t value = itr.pay[i] << 24
+                        | itr.pay[i+1] << 16
+                        | itr.pay[i+2] << 8
+                        | itr.pay[i+3];
+                    multicore_fifo_push_blocking(value);
+                }
             }
         }
     } else if (opcode == 0x8) {  // Close frame

@@ -1,20 +1,18 @@
 # Protocol Reference
 
 This document defines the communication protocol used between the hardware
-device and the browser user interface (UI) once a WebSocket connection has been
+device (HW) and the browser user interface (UI) once a WebSocket connection has been
 established. It specifies the binary message formats used for transferring
 network settings and control configuration as well as runtime commands and
-control data. The protocol defines the packet that contains multiple messages
-packed in it's body.
+control data.
 
 The hardware device stores its
 configuration locally and uses it to initialize and manage its networking, I/O pins,
-peripherals, and control logic. When a WebSocket connection is opened, the device also
+peripherals, and control logic. When a WebSocket connection is opened, the device
 transmits the stored configuration to the UI.
 
-## Packet Headers
-
-The packet payload header contains a Packet type and a length of the packet payload.
+All data communication is sent in, what is called in this reference, a "packet".
+The packet header contains a packet type and a length of the packet payload.
 
 ```none
 +---------+------------------------+---------------------------------------------+
@@ -26,8 +24,6 @@ The packet payload header contains a Packet type and a length of the packet payl
 +---------+------------------------+---------------------------------------------+
 ```
 
-### Packet Types
-
 Every packet have a packet type that specifies whether it is a configuration
 carrying packet, a data value packet or a command packet. The packet type is
 a single byte and always transmitted in the first byte.
@@ -36,8 +32,8 @@ a single byte and always transmitted in the first byte.
 +-----+------+-----------------------+--------------+
 | Dec | Hex  | Type                  | Use Messages |
 +-----+------+-----------------------+--------------+
-|  1  | 0x01 | Command               | Yes          |
-|  2  | 0x02 | Data Value            | Yes          |
+|  1  | 0x01 | Command               | No           |
+|  2  | 0x02 | Data Value            | No           |
 | 10  | 0x0A | Configuration         | Yes          |
 | 11  | 0x0B | Update Config Field/s | Yes          |
 | 12  | 0x0C | Update Secret Field/s | Yes          |
@@ -45,7 +41,37 @@ a single byte and always transmitted in the first byte.
 +-----+------+-----------------------+--------------+
 ```
 
-## Messages
+A "message", refered to in the last column of the table above, is one common pattern.
+Some packets use messages and others not as indicated the table above.
+
+## Common Patterns
+
+There are a few patterns that are reused. The most common example is the message
+pattern that can be used in the packet payload. It can thus be warpped as follows.
+
+```none
+Packet
+┌───────────────────────────────────────────────┐
+│ Packet Type (1 byte)                          │
+│ Payload Length (2 bytes)                      │
+│                                               │
+│   Message 1                                   │
+│   ┌───────────────────────────────────────┐   │
+│   │ Message Type (1)                      │   │
+│   │ Reserved (1)                          │   │
+│   │ Element ID (2)                        │   │
+│   │ Payload Length (1)                    │   │
+│   │ Message Payload (N)                   │   │
+│   └───────────────────────────────────────┘   │
+│                                               │
+│   Message 2                                   │
+│   ┌───────────────────────────────────────┐   │
+│   │ ...                                   │   │
+│   └───────────────────────────────────────┘   │
+└───────────────────────────────────────────────┘
+```
+
+### Messages
 
 The Packet payload can contains multiple messages that has the following protocol.
 
@@ -55,7 +81,7 @@ The Packet payload can contains multiple messages that has the following protoco
 +---------+------------------------+---------------------------------------------+
 |   0     | Message Type           | 1 byte — defines how payload is interpreted |
 |   1     | Reserved               | 1 byte — currently unused                   |
-| 2 – 3   | Element ID             | 2 bytes — unique identifier (LE or BE)      |
+| 2 – 3   | Element ID             | 2 bytes — unique identifier (big endian)    |
 |   4     | Payload Length         | 1 byte — size of Message payload in bytes   |
 | 5..N    | Message Payload        | Variable — depends on Message type          |
 +---------+------------------------+---------------------------------------------+
@@ -63,7 +89,7 @@ The Packet payload can contains multiple messages that has the following protoco
 
 Each message begins with a 1-byte Message Type field indicating how the message
 should be interpreted, followed by a 1-byte Reserved field currently unused.
-This is followed by a 2-byte Element ID (endianness defined by the protocol),
+This is followed by a 2-byte Element ID (in big endian),
 which uniquely identifies the element.
 
 The term 'Element' is introduced to refer to configuration and control elements
@@ -76,34 +102,186 @@ specifies the size of the message payload in bytes. The remainder of the
 message consists of the Message Payload, whose structure and meaning depend on
 the Message Type.
 
-### Message Types
+### Elements
 
-0x01: UI input button
-0x02: UI input switch
-0x03: UI input slider
-0x04: UI input dial
-0x05: UI input 2D slider
-0x06: UI input multi slider
-0x07: UI input timer
+The concept of elements refers to individual IO (and other) components like
+a button, a GPIO or even a string containg a label of another element.
+Each element has an element ID attached that can be used to refer to.
 
-0x10: UI output gauge
-0x11: UI output indicator
-0x12: UI output graph
+### IDs
 
-0x20: HW input Core
-0x21: HW input GPI
-0x22: HW input ADC
+IDs are 2 byte numbers in big endian and is mostly used to identify and reference elements.
 
-0x30: HW output LED
-0x31: HW output GPO
-0x32: HW output PWM
+## Message Types
 
-0xA0: String
+The first byte in the message is the message type and is used to show how the message payload
+should be parsed. The Message Type field is 8 bits wide. When bits 7 and 6 are both 0,
+the Message Type represents an I/O Type.
 
-0xB0: Device IDs
-0xB1: Device Fields
-0xB2: Network IDs
-0xB3: Network Fields
+```none
+Bit Layout (MSB → LSB)
+
+  7   6   5   4   3   2   1   0
++---+---+---+---+---------------+
+| 0 | 0 | L | D |   Type ID     |
++---+---+---+---+---------------+
+
++-----+---------------+---------------------------------------------+
+| Bit | Name          | Description                                 |
++-----+---------------+---------------------------------------------+
+| 7   | Class         | MUST be 0 for I/O types                     |
+| 6   | Class         | MUST be 0 for I/O types                     |
+| 5   | Location (L)  | 0 = Hardware device, 1 = UI (Web Interface) |
+| 4   | Direction (D) | 0 = Output element, 1 = Input element       |
+| 3–0 | Type ID       | 4-bit subtype identifier                    |
++-----+---------------+---------------------------------------------+
+```
+
+### Control Elements
+
+Control elements are UI and HW, input and output elements.
+
+#### UI Output
+
+UI output elements are meant to display events and data on the UI.
+
+```none
++-----+------+---------------------+
+| Dec | Hex  | Type                |
++-----+------+---------------------+
+|   0 | 0x00 | UI output gauge     |
+|   1 | 0x01 | UI output indicator |
+|   2 | 0x02 | UI output graph     |
++-----+------+---------------------+
+```
+
+#### UI Input
+
+UI input elements are meant to control and send events from the UI.
+
+```none
++-----+------+-----------------------+
+| Dec | Hex  | Type                  |
++-----+------+-----------------------+
+|  16 | 0x10 | UI input button       |
+|  17 | 0x11 | UI input switch       |
+|  18 | 0x12 | UI input slider       |
+|  19 | 0x13 | UI input 2D slider    |
+|  20 | 0x14 | UI input multi slider |
+|  21 | 0x15 | UI input dial         |
+|  22 | 0x16 | UI input timer        |
++-----+------+-----------------------+
+```
+
+#### HW Output
+
+HW output elements are meant to output signals on the GPIO pins.
+
+```none
++-----+------+---------------------+
+| Dec | Hex  | Type                |
++-----+------+---------------------+
+|  32 | 0x20 | HW output LED       |
+|  33 | 0x21 | HW output GPO       |
+|  34 | 0x22 | HW output PWM       |
++-----+------+---------------------+
+```
+
+#### HW Input
+
+HW input elements are meant to read input signals on the GPIO pins.
+
+```none
++-----+------+---------------------+
+| Dec | Hex  | Type                |
++-----+------+---------------------+
+|  48 | 0x30 | HW input Core       |
+|  49 | 0x31 | HW input GPI        |
+|  50 | 0x32 | HW input ADC        |
++-----+------+---------------------+
+```
+
+### Supporting Elements
+
+```none
++-----+------+--------------+
+| Dec | Hex  | Type         |
++-----+------+--------------+
+| 160 | 0xA0 | String       |
++-----+------+--------------+
+```
+
+### Networking Elements
+
+```none
++-----+------+----------------+
+| Dec | Hex  | Type           |
++-----+------+----------------+
+| 176 | 0xB0 | Device IDs     |
+| 177 | 0xB1 | Device Fields  |
+| 178 | 0xB2 | Network IDs    |
+| 179 | 0xB3 | Network Fields |
++-----+------+----------------+
+```
+
+## Commands
+
+Commands (package type 0x01) are used to send a command (mostly UI to HW)
+to perform an action. A typical example is if the user presses a button on
+the UI and the HW toggles a GPIO pin.
+
+```none
++---------+------------------------+---------------------------------------------+
+|  Byte   |        Field           |                 Description                 |
++---------+------------------------+---------------------------------------------+
+|   0     | Message Type           | Defines how command payload is interpreted  |
+|   1     | Reserved               | Currently unused                            |
+| 2 – 3   | Element ID             | Identifier of initiating element            |
+|   4     | Payload Length         | Size of command payload in bytes            |
+| 5..N    | Message Payload        | Command payload                             |
++---------+------------------------+---------------------------------------------+
+```
+
+### Button Payload
+
+```none
++---------+------------------------+---------------------------------------------+
+|  Byte   |        Field           |                 Description                 |
++---------+------------------------+---------------------------------------------+
+| 0 – 1   | Button Value           | 2 bytes — the value, 0 or 1 (big endian)    |
++---------+------------------------+---------------------------------------------+
+```
+
+## Configuration
+
+### Control Configuration
+
+#### UI Input Elements
+
+```none
+Button Payload
+
++---------+------------------------+-----------------------------------------------------------+
+|  Byte   |        Field           |                         Description                       |
++---------+------------------------+-----------------------------------------------------------+
+| 0 – 1   | Label ID               | 2 bytes — reference to string element holding label text  |
+| 2 – 3   | X value                | 2 bytes — X value on UI                                   |
+| 4 – 5   | Y value                | 2 bytes — Y value on UI                                   |
+|   6     | Button style options   | 1 byte — how the button should look                       |
++---------+------------------------+-----------------------------------------------------------+
+```
+
+#### HW Output Elements
+
+```none
+LED Payload
+
++---------+------------------------+----------------------------------------+
+|  Byte   |        Field           |            Description                 |
++---------+------------------------+----------------------------------------+
+| 0 – 1   | Source Element ID      | 2 bytes — reference to source element  |
++---------+------------------------+----------------------------------------+
+```
 
 ### Networking Config Elements
 

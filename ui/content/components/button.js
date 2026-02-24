@@ -2,7 +2,7 @@ class uiButton extends uiComponents {
     constructor(x = 0, y = 0) {
         super("button", x, y);
 
-        this.tc = 0x01;
+        this.tc = 0x10;
 
         this.outputs.push(
             {
@@ -43,18 +43,11 @@ class uiButton extends uiComponents {
 
     marshal() {
         const buffer = [];
-        let targetId = 0;
-
-        if (this.outputs[0].connected) {
-            targetId = this.outputs[0].connected.id;
-        }
 
         buffer.push(this.tc);
         buffer.push(0x00);
         buffer.push((this.id >> 8) & 0xFF, this.id & 0xFF);
-        buffer.push(0x04);
-        buffer.push((this.labelId >> 8) & 0xFF, this.labelId & 0xFF);
-        buffer.push((this.targetId >> 8) & 0xFF, this.targetId & 0xFF);
+        buffer.push(0x00);
 
         return buffer;
     }

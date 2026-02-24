@@ -2,7 +2,7 @@ class uiLed extends uiComponents {
     constructor(x = 0, y = 0) {
         super("led",x,y);
 
-        this.tc = 0x30;
+        this.tc = 0x20;
 
         this.inputs.push(
             {
@@ -38,11 +38,17 @@ class uiLed extends uiComponents {
 
     marshal() {
         const buffer = [];
+        let sourceID = 0;
+
+        if (this.inputs[0].connected) {
+            sourceID = this.inputs[0].connected.id;
+        }
 
         buffer.push(this.tc);
         buffer.push(0x00);
         buffer.push((this.id >> 8) & 0xFF, this.id & 0xFF);
-        buffer.push(0x00);
+        buffer.push(0x02);
+        buffer.push((this.sourceID >> 8) & 0xFF, this.sourceID & 0xFF);
 
         return buffer;
     }

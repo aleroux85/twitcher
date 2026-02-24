@@ -186,6 +186,9 @@ void core1_worker() {
                     pwm_set_chan_level(slice_num, PWM_CHAN_B, 0);
                 }
             case CONFIG_OPERATION_CONTROL_ACTION:
+                msg = multicore_fifo_pop_blocking();
+                ProtocolPacket decoded = decode_packet(msg);
+                
                 uint32_t values[decoded.n_values];
                 for (size_t iValue = 0; iValue < decoded.n_values; iValue++) {
                     values[iValue] = multicore_fifo_pop_blocking();

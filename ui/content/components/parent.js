@@ -90,6 +90,15 @@ class uiComponents {
         this.y = this.draggingOrig.y + dy;
         // updateNodeTransform();
         this.gElm.setAttribute('transform', `translate(${this.x} ${this.y}) rotate(${this.r || 0})`);
+        this.outputs.forEach(output => {
+            const d = output.elm.children[0].getAttribute('d');
+            const match = d.match(/L\s*([-\d.]+)[ ,]+([-\d.]+)/);
+            if (!match) return;
+            const a = match[1];
+            const b = match[2];
+            const [x, y] = this.wireCoords();
+            output.elm.children[0].setAttribute('d', `M ${x} ${y} L ${a} ${b}`);
+        });
         this.inputs.forEach(input => {
             const d = input.elm.children[0].getAttribute('d');
             const match = d.match(/M\s*([-\d.]+)[ ,]+([-\d.]+)/);

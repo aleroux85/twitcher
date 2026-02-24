@@ -1,4 +1,4 @@
-let socket;
+let socket, gfig;
 
 function networkingTemplate(state) {
     const editableField = (obj, type, field, label, nindex=-1, secret=false, dindex=-1) => {
@@ -143,12 +143,17 @@ function toggleWebSocket(n,d) {
         connectWebSocket(networks[n].devices[d]);
         } else { //testing
             const data = new Uint8Array([ //testing
-                0xb0, 0x00, 0x00, 0x00, 0x07, 0x00, 0x64, 0x00, 0x84, 0xfe, 0x18, 0x07, 0xb1, 0x00, 0x00, 0x00, //testing
-                0x06, 0x01, 0x49, 0x4a, 0x54, 0x54, 0x00, 0xb1, 0x00, 0x00, 0x00, 0x03, 0x02, 0x00, 0x00, 0xb2, //testing
-                0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xb3, 0x00, 0x00, 0x00, 0x06, 0x01, 0x49, 0x4a, 0x54, 0x54, 0x00, 0xb3, //testing
-                0x00, 0x00, 0x00, 0x0f, 0x02, 0x6e, 0x65, 0x6f, 0x47, 0x72, 0x61, 0x70, 0x68, 0x2d, 0x49, 0x4a, //testing
-                0x54, 0x54, 0x00]); //testing
-            unmarshalConfigs(data); //testing
+                0xA0, 0, 60, //testing
+                0xB0, 0, 0, 0, 9, 0, 189, 252, 234, 193, 78, 30, 121, 77, //testing
+                0xB1, 0, 0, 0, 5, 1, 76, 56, 83, 71, //testing
+                0xB1, 0, 0, 0, 3, 2, 0, 0, //testing
+                0xB2, 0, 0, 0, 2, 0, 1, //testing
+                0xB3, 0, 0, 0, 5, 1, 76, 56, 83, 71, //testing
+                0xB3, 0, 0, 0, 4, 2, 76, 82, 88, //testing
+            ]); //testing
+            networks[0].devices[0].did = data.slice(9,17); //testing
+            gfig = data.slice(3); //testing
+            unmarshalConfigs(gfig); //testing
         } //testing
     }
 }
@@ -283,12 +288,12 @@ function connectWebSocket(device) {
             console.log("Received binary data:", data);
 
             if (data[0] === 0x0A) {
-                unmarshalConfigs(data.slice(3));
+                gfig = data.slice(3);
+                unmarshalConfigs(gfig);
                 // console.log(config);
                 // reconstructConfigInterface(config);
                 // buildInterface(config);
             } else if (data[0] === 0x0D) {
-                console.log("got mac");
                 networks[0].devices[0].did = data.slice(3);
             }
 

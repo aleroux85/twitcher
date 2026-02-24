@@ -68,12 +68,6 @@ void write_config(const uint8_t* data, size_t length) {
     restore_interrupts(ints);
 }
 
-void apply_config(const uint8_t* data, size_t length) {
-    write_config(data,length);
-    printf("unmarshalling config\n");
-    unmarshal_controls(data+3,length-3);
-}
-
 void update_secrets(const uint8_t* new_buf, size_t new_len) {
     printf("updating secrets in rom with message, len %d\n", new_len);
     for (int i = 0; i < new_len; i++) {
@@ -353,16 +347,167 @@ size_t wrap_config(uint8_t *out, const char name[5]) {
     return (size_t)(p - out);
 }
 
+
+
+// static char log_buf[256];
+// static size_t log_pos = 0;
+
+// void log_appendf(const char *fmt, ...) {
+//     va_list args;
+//     va_start(args, fmt);
+//     log_pos += vsnprintf(&log_buf[log_pos], sizeof(log_buf) - log_pos, fmt, args);
+//     va_end(args);
+// }
+
+
+
+
+
+// ControlList* unmarshal_controls(const uint8_t* data, size_t length) {
+void unmarshal_controls(const uint8_t* data, size_t length) {
+    config_element_iterator itr;
+    config_element_iterator_init(&itr, data, length);
+
+    // size_t offset = 0;
+    // size_t capacity = 4;
+
+    while (itr.next(&itr)) {
+        uint32_t control_setup_msg;
+
+        switch (itr.type) {
+        case CONTROL_TYPE_LED:
+            if (itr.len != 2) break;
+
+            control_setup_msg = (CONFIG_OPERATION_TYPE_SETUP << 24)
+                | (CONTROL_TYPE_LED << 16)
+                | (itr.pay[0]<<8 | itr.pay[1]);
+
+            printf("send %X\n",control_setup_msg);
+            multicore_fifo_push_blocking(control_setup_msg);
+            break;
+        
+        default:
+            printf("skipping control type %02X\n",itr.type);
+            break;
+        }
+    }
+
+    // while (offset + 4 <= length) {
+    //     Control control = {0};
+    //     control.type = data[offset++];
+    //     offset++;
+    //     control.id = (data[offset] << 8) | data[offset + 1];
+    //     offset += 2;
+
+    //     if (control.type < 0x20 || control.type > 0x3F) {
+    //         printf("Unsupported control type: 0x%02X, skipping %i\n", control.type,data[offset]);
+    //         offset += data[offset++];
+    //         continue;
+    //     }
+            
+    // // printf("control type %02X, offset %i, length %i\n",control.type,offset,length);
+    //     uint32_t control_setup_msg;
+    //     switch (control.type) {
+    //         case CONTROL_TYPE_LED:
+    //             if (offset + 1 > length) break;  // bounds check
+    //             // control.payload_type = PAYLOAD_ID_REF;
+    //             // control.ref_id = (data[offset] << 8) | data[offset + 1];
+    //             offset += 1;
+
+    //             control_setup_msg = (CONFIG_OPERATION_TYPE_SETUP << 24)
+    //                 | (CONTROL_TYPE_LED << 16)
+    //                 | control.id;
+    //             // printf("send %X\n",control_setup_msg);
+    //             multicore_fifo_push_blocking(control_setup_msg);
+    //             break;
+        
+    //         case CONTROL_TYPE_GPIO:
+    //             if (offset + 1 > length) break;  // bounds check
+    //             offset += 1;
+
+    //             control_setup_msg = (CONFIG_OPERATION_TYPE_SETUP << 24)
+    //                 | (CONTROL_TYPE_GPIO << 16)
+    //                 | (data[offset++] << 27)
+    //                 | control.id;
+    //             // printf("send %X\n",control_setup_msg);
+    //             multicore_fifo_push_blocking(control_setup_msg);
+    //             break;
+        
+    //         case CONTROL_TYPE_PWM:
+    //             if (offset + 1 > length) break;  // bounds check
+    //             offset += 1;
+
+    //             control_setup_msg = (CONFIG_OPERATION_TYPE_SETUP << 24)
+    //                 | (CONTROL_TYPE_PWM << 16)
+    //                 | (data[offset++] << 27)
+    //                 | control.id;
+    //             // printf("send %X\n",control_setup_msg);
+    //             multicore_fifo_push_blocking(control_setup_msg);
+
+    //             control_setup_msg = (data[offset++] << 24)
+    //                 | (data[offset++] << 16)
+    //                 | (data[offset++] << 8)
+    //                 | data[offset++];
+    //             // printf("send %X\n",control_setup_msg);
+    //             multicore_fifo_push_blocking(control_setup_msg);
+
+    //             control_setup_msg = (data[offset++] << 24)
+    //                 | (data[offset++] << 16)
+    //                 | (data[offset++] << 8)
+    //                 | data[offset++];
+    //             // printf("send %X\n",control_setup_msg);
+    //             multicore_fifo_push_blocking(control_setup_msg);
+
+    //             control_setup_msg = (data[offset++] << 24)
+    //                 | (data[offset++] << 16)
+    //                 | (data[offset++] << 8)
+    //                 | data[offset++];
+    //             // printf("send %X\n",control_setup_msg);
+    //             multicore_fifo_push_blocking(control_setup_msg);
+
+    //             break;
+
+    //         // case 0xA0:
+    //         //     if (offset + 1 > length) break;  // bounds check
+    //         //     // control.payload_type = PAYLOAD_STRING;
+    //         //     control.string_payload.length = data[offset++];
+    //         //     if (offset + control.string_payload.length > length) break;
+        
+    //         //     control.string_payload.str = malloc(control.string_payload.length + 1);
+    //         //     memcpy(control.string_payload.str, data + offset, control.string_payload.length);
+    //         //     control.string_payload.str[control.string_payload.length] = '\0';  // null-terminate
+    //         //     offset += control.string_payload.length;
+    //         //     break;
+        
+    //         default:
+    //             printf("skipping control type %02X\n",control.payload_type);
+    //             // control.payload_type = PAYLOAD_NONE;
+    //             break;
+    //     }
+
+    //     // if (list->count >= capacity) {
+    //     //     capacity *= 2;
+    //     //     Control* new_controls = realloc(list->controls, capacity * sizeof(Control));
+    //     //     if (!new_controls) {
+    //     //         fprintf(stderr, "Memory reallocation failed\n");
+    //     //         free(list->controls);
+    //     //         exit(1);
+    //     //     }
+    //     //     list->controls = new_controls;
+    //     // }
+
+    //     // list->controls[list->count++] = control;
+    // }
+
+    // return list;
+}
+
 int unmarshal_network_config(
     uint8_t *data,
     size_t length, 
     const uint8_t *target_did,
     network_setup *out
 ) {
-    // memset(out->device.name, 0, sizeof(out->device.name));
-    // memset(out->network.name, 0, sizeof(out->network.name));
-    // memset(out->network.ssid, 0, sizeof(out->network.ssid));
-
     config_element_iterator itr;
     config_element_iterator_init(&itr, data, length);
 
@@ -375,9 +520,9 @@ int unmarshal_network_config(
 
     while (itr.next(&itr)) {
         if (itr.type == 0xB0) {
-            printf("got B0\n");
+            // printf("got B0\n");
             if (memcmp(itr.pay+1, target_did, PICO_UNIQUE_BOARD_ID_SIZE_BYTES) == 0) {
-                printf("match DID\n");
+                // printf("match DID\n");
                 out->device.id = itr.id;
                 memcpy(out->device.did,itr.pay+1,PICO_UNIQUE_BOARD_ID_SIZE_BYTES);
                 break;
@@ -456,16 +601,6 @@ int unmarshal_network_config(
     }
 
     return 1;
-}
-
-static char log_buf[256];
-static size_t log_pos = 0;
-
-void log_appendf(const char *fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    log_pos += vsnprintf(&log_buf[log_pos], sizeof(log_buf) - log_pos, fmt, args);
-    va_end(args);
 }
 
 void retrieve_networking_config(network_setup *out) {
@@ -553,124 +688,8 @@ uint16_t retrieve_store(uint8_t* data_buffer) {
     return data_length;
 }
 
-// ControlList* unmarshal_controls(const uint8_t* data, size_t length) {
-void unmarshal_controls(const uint8_t* data, size_t length) {
-    // ControlList *list = calloc(1,sizeof(ControlList));
-    size_t offset = 0;
-    size_t capacity = 4;
-
-    // list->controls = malloc(capacity * sizeof(Control));
-    // if (!list->controls) {
-    //     printf("Memory allocation failed\n");
-    //     exit(1);
-    // }
-
-    while (offset + 4 <= length) {
-        Control control = {0};
-        control.type = data[offset++];
-        offset++;
-        control.id = (data[offset] << 8) | data[offset + 1];
-        offset += 2;
-
-        if (control.type < 0x20 || control.type > 0x3F) {
-            printf("Unsupported control type: 0x%02X, skipping %i\n", control.type,data[offset]);
-            offset += data[offset++];
-            continue;
-        }
-            
-    // printf("control type %02X, offset %i, length %i\n",control.type,offset,length);
-        uint32_t control_setup_msg;
-        switch (control.type) {
-            case CONTROL_TYPE_LED:
-                if (offset + 1 > length) break;  // bounds check
-                // control.payload_type = PAYLOAD_ID_REF;
-                // control.ref_id = (data[offset] << 8) | data[offset + 1];
-                offset += 1;
-
-                control_setup_msg = (CONFIG_OPERATION_TYPE_SETUP << 24)
-                    | (CONTROL_TYPE_LED << 16)
-                    | control.id;
-                // printf("send %X\n",control_setup_msg);
-                multicore_fifo_push_blocking(control_setup_msg);
-                break;
-        
-            case CONTROL_TYPE_GPIO:
-                if (offset + 1 > length) break;  // bounds check
-                offset += 1;
-
-                control_setup_msg = (CONFIG_OPERATION_TYPE_SETUP << 24)
-                    | (CONTROL_TYPE_GPIO << 16)
-                    | (data[offset++] << 27)
-                    | control.id;
-                // printf("send %X\n",control_setup_msg);
-                multicore_fifo_push_blocking(control_setup_msg);
-                break;
-        
-            case CONTROL_TYPE_PWM:
-                if (offset + 1 > length) break;  // bounds check
-                offset += 1;
-
-                control_setup_msg = (CONFIG_OPERATION_TYPE_SETUP << 24)
-                    | (CONTROL_TYPE_PWM << 16)
-                    | (data[offset++] << 27)
-                    | control.id;
-                // printf("send %X\n",control_setup_msg);
-                multicore_fifo_push_blocking(control_setup_msg);
-
-                control_setup_msg = (data[offset++] << 24)
-                    | (data[offset++] << 16)
-                    | (data[offset++] << 8)
-                    | data[offset++];
-                // printf("send %X\n",control_setup_msg);
-                multicore_fifo_push_blocking(control_setup_msg);
-
-                control_setup_msg = (data[offset++] << 24)
-                    | (data[offset++] << 16)
-                    | (data[offset++] << 8)
-                    | data[offset++];
-                // printf("send %X\n",control_setup_msg);
-                multicore_fifo_push_blocking(control_setup_msg);
-
-                control_setup_msg = (data[offset++] << 24)
-                    | (data[offset++] << 16)
-                    | (data[offset++] << 8)
-                    | data[offset++];
-                // printf("send %X\n",control_setup_msg);
-                multicore_fifo_push_blocking(control_setup_msg);
-
-                break;
-
-            // case 0xA0:
-            //     if (offset + 1 > length) break;  // bounds check
-            //     // control.payload_type = PAYLOAD_STRING;
-            //     control.string_payload.length = data[offset++];
-            //     if (offset + control.string_payload.length > length) break;
-        
-            //     control.string_payload.str = malloc(control.string_payload.length + 1);
-            //     memcpy(control.string_payload.str, data + offset, control.string_payload.length);
-            //     control.string_payload.str[control.string_payload.length] = '\0';  // null-terminate
-            //     offset += control.string_payload.length;
-            //     break;
-        
-            default:
-                printf("skipping control type %02X\n",control.payload_type);
-                // control.payload_type = PAYLOAD_NONE;
-                break;
-        }
-
-        // if (list->count >= capacity) {
-        //     capacity *= 2;
-        //     Control* new_controls = realloc(list->controls, capacity * sizeof(Control));
-        //     if (!new_controls) {
-        //         fprintf(stderr, "Memory reallocation failed\n");
-        //         free(list->controls);
-        //         exit(1);
-        //     }
-        //     list->controls = new_controls;
-        // }
-
-        // list->controls[list->count++] = control;
-    }
-
-    // return list;
+void apply_config(const uint8_t* data, size_t length) {
+    write_config(data,length);
+    printf("unmarshalling config\n");
+    unmarshal_controls(data+3,length-3);
 }
