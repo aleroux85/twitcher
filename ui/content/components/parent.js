@@ -14,6 +14,8 @@ class uiComponents {
         this.actNum = null;
         this.marked = false;
 
+        this.socket = socket;
+
         elements[this.name] = this;
     }
 

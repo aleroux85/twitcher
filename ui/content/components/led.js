@@ -48,7 +48,7 @@ class uiLed extends uiComponents {
         buffer.push(0x00);
         buffer.push((this.id >> 8) & 0xFF, this.id & 0xFF);
         buffer.push(0x02);
-        buffer.push((this.sourceID >> 8) & 0xFF, this.sourceID & 0xFF);
+        buffer.push((sourceID >> 8) & 0xFF, sourceID & 0xFF);
 
         return buffer;
     }

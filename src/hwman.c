@@ -37,39 +37,41 @@ typedef struct {
     uint8_t operation;
     union {
         uint8_t control_type;
-        uint8_t n_values;
+        // uint8_t n_values;
     };
-    uint8_t io;
+    // uint8_t io;
     union {
         uint16_t id;
-        uint16_t param;
+        // uint16_t param;
     };
-    uint16_t val0;
-    uint16_t val1;
-    uint16_t clksteps;
-    float grad;
-    uint16_t offset;
+    uint8_t value;
+    // uint16_t val0;
+    // uint16_t val1;
+    // uint16_t clksteps;
+    // float grad;
+    // uint16_t offset;
 
     UT_hash_handle hh;
-} ProtocolPacket;
+} hwop;
 
-ProtocolPacket decode_packet(uint32_t packet) {
-    ProtocolPacket result;
+hwop decode_hwop(uint32_t packet) {
+    hwop result;
 
-    result.operation    = (packet >> 24) & 0x07;
-    result.io           = (packet >> 27) & 0xFF;
-    result.control_type = (packet >> 16) & 0xFF;
-    result.param        = (packet >> 0)  & 0xFFFF;
+    result.operation    = (packet >> 30) & 0x03;
+    result.control_type = ((packet >> 24) & 0x1F) | 0x20;
+    result.id = (packet >> 8)  & 0xFFFF;
+    // result.io           = (packet >> 27) & 0xFF;
+    result.value        = (packet >> 0)  & 0xFF;
 
     return result;
 }
 
-static ProtocolPacket *packet_table = NULL;
+static hwop *packet_table = NULL;
 
-void add_packet(ProtocolPacket *pkt) {
+void add_packet(hwop *op) {
     // First check if one with the same ID already exists
-    ProtocolPacket *existing = NULL;
-    HASH_FIND(hh, packet_table, &pkt->id, sizeof(uint16_t), existing);
+    hwop *existing = NULL;
+    HASH_FIND(hh, packet_table, &op->id, sizeof(uint16_t), existing);
     if (existing) {
         // Replace the old packet
         HASH_DEL(packet_table, existing);
@@ -77,20 +79,20 @@ void add_packet(ProtocolPacket *pkt) {
     }
 
     // Allocate and copy
-    ProtocolPacket *new_pkt = malloc(sizeof(ProtocolPacket));
-    if (!new_pkt) return;  // handle allocation failure
-    *new_pkt = *pkt;
-    HASH_ADD(hh, packet_table, id, sizeof(uint16_t), new_pkt);
+    hwop *new_op = malloc(sizeof(hwop));
+    if (!new_op) return;  // handle allocation failure
+    *new_op = *op;
+    HASH_ADD(hh, packet_table, id, sizeof(uint16_t), new_op);
 }
 
-ProtocolPacket *find_packet(uint16_t id) {
-    ProtocolPacket *pkt = NULL;
-    HASH_FIND(hh, packet_table, &id, sizeof(uint16_t), pkt);
-    return pkt; // may be NULL
+hwop *find_packet(uint16_t id) {
+    hwop *op = NULL;
+    HASH_FIND(hh, packet_table, &id, sizeof(uint16_t), op);
+    return op; // may be NULL
 }
 
 void delete_all_packets() {
-    ProtocolPacket *current, *tmp;
+    hwop *current, *tmp;
     HASH_ITER(hh, packet_table, current, tmp) {
         HASH_DEL(packet_table, current);
         free(current);
@@ -115,61 +117,61 @@ void core1_worker() {
             next_uptime_timeout = up_time_elapsed + 5;
         }
 
-        uint32_t msg;
-        if (multicore_fifo_pop_timeout_us(1000, &msg)) {
-            ProtocolPacket decoded = decode_packet(msg);
-            // printf("hw opp %d type %d, io %d\n",decoded.operation, decoded.control_type, decoded.io);
+        uint32_t op;
+        if (multicore_fifo_pop_timeout_us(1000, &op)) {
+            hwop decop = decode_hwop(op);
+            // printf("hw opp %d type %d, io %d\n",decop.operation, decop.control_type, decop.io);
             
-            switch (decoded.operation) {
+            switch (decop.operation) {
             case CONFIG_OPERATION_TYPE_SETUP:
-                switch (decoded.control_type) {
-                case CONTROL_TYPE_GPIO:
-                    gpio_init(decoded.io);
-                    gpio_set_dir(decoded.io, GPIO_OUT);
-                    break;
+                // switch (decop.control_type) {
+                // case CONTROL_TYPE_GPIO:
+                //     gpio_init(decop.io);
+                //     gpio_set_dir(decop.io, GPIO_OUT);
+                //     break;
                 
-                case CONTROL_TYPE_PWM:
-                    gpio_set_function(decoded.io, GPIO_FUNC_PWM);
-                    uint slice_num = pwm_gpio_to_slice_num(decoded.io);
-                    uint channel = pwm_gpio_to_channel(decoded.io);
+                // case CONTROL_TYPE_PWM:
+                //     gpio_set_function(decop.io, GPIO_FUNC_PWM);
+                //     uint slice_num = pwm_gpio_to_slice_num(decop.io);
+                //     uint channel = pwm_gpio_to_channel(decop.io);
 
-                    uint32_t frqval = multicore_fifo_pop_blocking();
-                    uint16_t freq = (frqval>>24)&0xFF | (frqval>>16)&0xFF;
-                    int16_t valx = (frqval>>8)&0xFF | frqval&0xFF;
+                //     uint32_t frqval = multicore_fifo_pop_blocking();
+                //     uint16_t freq = (frqval>>24)&0xFF | (frqval>>16)&0xFF;
+                //     int16_t valx = (frqval>>8)&0xFF | frqval&0xFF;
 
-                    uint32_t mappoint0 = multicore_fifo_pop_blocking();
-                    uint16_t dc0 = (mappoint0>>24)&0xFF | (mappoint0>>16)&0xFF;
-                    decoded.val0 = (mappoint0>>8)&0xFF | mappoint0&0xFF;
+                //     uint32_t mappoint0 = multicore_fifo_pop_blocking();
+                //     uint16_t dc0 = (mappoint0>>24)&0xFF | (mappoint0>>16)&0xFF;
+                //     decop.val0 = (mappoint0>>8)&0xFF | mappoint0&0xFF;
 
-                    uint32_t mappoint1 = multicore_fifo_pop_blocking();
-                    uint16_t dc1 = (mappoint1>>24)&0xFF | (mappoint1>>16)&0xFF;
-                    decoded.val1 = (mappoint1>>8)&0xFF | mappoint1&0xFF;
+                //     uint32_t mappoint1 = multicore_fifo_pop_blocking();
+                //     uint16_t dc1 = (mappoint1>>24)&0xFF | (mappoint1>>16)&0xFF;
+                //     decop.val1 = (mappoint1>>8)&0xFF | mappoint1&0xFF;
 
-                    pwm_set_clkdiv(slice_num, 100.0f);
-                    decoded.clksteps = ((clock_get_hz(clk_sys)/100)/freq);
-                    // pwm freq = clock freq / (clkdiv*(wrap+1))
-                    // the -1 below comes from the +1 after the wrap
-                    pwm_set_wrap(slice_num, decoded.clksteps-1);
+                //     pwm_set_clkdiv(slice_num, 100.0f);
+                //     decop.clksteps = ((clock_get_hz(clk_sys)/100)/freq);
+                //     // pwm freq = clock freq / (clkdiv*(wrap+1))
+                //     // the -1 below comes from the +1 after the wrap
+                //     pwm_set_wrap(slice_num, decop.clksteps-1);
 
-                    decoded.grad = (float)(dc1-dc0)/(decoded.val1-decoded.val0);
-                    decoded.offset = dc0;
+                //     decop.grad = (float)(dc1-dc0)/(decop.val1-decop.val0);
+                //     decop.offset = dc0;
 
-                    if (valx < decoded.val0) {valx = decoded.val0;}
-                    if (valx > decoded.val1) {valx = decoded.val1;}
+                //     if (valx < decop.val0) {valx = decop.val0;}
+                //     if (valx > decop.val1) {valx = decop.val1;}
 
-                    float dcx = (valx-decoded.val0)*decoded.grad + decoded.offset;
-                    uint32_t lvl = (uint32_t)((dcx/100.0f)*decoded.clksteps);
+                //     float dcx = (valx-decop.val0)*decop.grad + decop.offset;
+                //     uint32_t lvl = (uint32_t)((dcx/100.0f)*decop.clksteps);
 
-                    pwm_set_chan_level(slice_num, channel, lvl);
-                    pwm_set_enabled(slice_num, true);
-                    break;
+                //     pwm_set_chan_level(slice_num, channel, lvl);
+                //     pwm_set_enabled(slice_num, true);
+                //     break;
                 
-                default:
-                    break;
-                }
+                // default:
+                //     break;
+                // }
 
-                add_packet(&decoded);
-                printf("hw man adding control type %02X on ID %i\n",decoded.control_type,decoded.id);
+                add_packet(&decop);
+                printf("hw man adding control type %02X on ID %i\n",decop.control_type,decop.id);
                 break;
 
             case CONFIG_OPERATION_TYPE_CLEAN_SETUP:
@@ -186,39 +188,43 @@ void core1_worker() {
                     pwm_set_chan_level(slice_num, PWM_CHAN_B, 0);
                 }
             case CONFIG_OPERATION_CONTROL_ACTION:
-                msg = multicore_fifo_pop_blocking();
-                ProtocolPacket decoded = decode_packet(msg);
+                // msg = multicore_fifo_pop_blocking();
+                printf("hw man buffer %02X %02X %02X %02X\n",op>>24&0xFF,op>>16&0xFF,op>>8&0xFF,op&0xFF);
+                // hwop decop = decode_hwop(msg);
                 
-                uint32_t values[decoded.n_values];
-                for (size_t iValue = 0; iValue < decoded.n_values; iValue++) {
-                    values[iValue] = multicore_fifo_pop_blocking();
-                }
+                // uint32_t values[decop.n_values];
+                // for (size_t iValue = 0; iValue < decop.n_values; iValue++) {
+                //     values[iValue] = multicore_fifo_pop_blocking();
+                // }
 
-                ProtocolPacket *pkt = find_packet(decoded.id);
-                if (pkt) {
-                    switch (pkt->control_type) {
+                printf("hw man finding ID %d\n",decop.id);
+                
+                hwop *stored_op = find_packet(decop.id);
+                printf("hw man found type %02X with ID %d\n",stored_op->control_type,stored_op->id);
+                if (stored_op) {
+                    switch (stored_op->control_type) {
                     case CONTROL_TYPE_LED:
-                        printf("switch LED, value:%i\n",values[0]);
+                        printf("switch LED, value:%i\n",decop.value);
                         multicore_fifo_push_blocking(2);
-                        multicore_fifo_push_blocking(values[0]);
+                        multicore_fifo_push_blocking(decop.value);
                         break;
                     
-                    case CONTROL_TYPE_GPIO:
-                        printf("switch GPIO, value:%i\n",values[0]);
-                        gpio_put(pkt->io,values[0]);
-                        break;
+                    // case CONTROL_TYPE_GPIO:
+                    //     printf("switch GPIO, value:%i\n",values[0]);
+                    //     gpio_put(pkt->io,values[0]);
+                    //     break;
                     
-                    case CONTROL_TYPE_PWM:
-                        // printf("control PWM, value:%i\n",values[0]);
-                        if (values[0] < pkt->val0) {values[0] = pkt->val0;}
-                        if (values[0] > pkt->val1) {values[0] = pkt->val1;}
-                        float dcx = (values[0]-pkt->val0)*pkt->grad + pkt->offset;
-                        uint32_t lvl = (uint32_t)((dcx/100.0f)*pkt->clksteps);
+                    // case CONTROL_TYPE_PWM:
+                    //     // printf("control PWM, value:%i\n",values[0]);
+                    //     if (values[0] < pkt->val0) {values[0] = pkt->val0;}
+                    //     if (values[0] > pkt->val1) {values[0] = pkt->val1;}
+                    //     float dcx = (values[0]-pkt->val0)*pkt->grad + pkt->offset;
+                    //     uint32_t lvl = (uint32_t)((dcx/100.0f)*pkt->clksteps);
 
-                        uint slice_num = pwm_gpio_to_slice_num(pkt->io);
-                        uint channel = pwm_gpio_to_channel(pkt->io);
-                        pwm_set_chan_level(slice_num, channel, lvl);
-                        break;
+                    //     uint slice_num = pwm_gpio_to_slice_num(pkt->io);
+                    //     uint channel = pwm_gpio_to_channel(pkt->io);
+                    //     pwm_set_chan_level(slice_num, channel, lvl);
+                    //     break;
 
                     default:
                         break;

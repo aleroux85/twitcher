@@ -378,9 +378,9 @@ void unmarshal_controls(const uint8_t* data, size_t length) {
         case CONTROL_TYPE_LED:
             if (itr.len != 2) break;
 
-            control_setup_msg = (CONFIG_OPERATION_TYPE_SETUP << 24)
-                | (CONTROL_TYPE_LED << 16)
-                | (itr.pay[0]<<8 | itr.pay[1]);
+            control_setup_msg = (CONFIG_OPERATION_TYPE_SETUP << 30)
+                | ((CONTROL_TYPE_LED & 0x1F) << 24)
+                | (itr.pay[0]<<16 | itr.pay[1]<<8);
 
             printf("send %X\n",control_setup_msg);
             multicore_fifo_push_blocking(control_setup_msg);

@@ -13,6 +13,8 @@ class uiButton extends uiComponents {
         this.actDir = "outputs";
         this.actNum = 0;
 
+        this.value = false;
+
         this.buildGraphElement();
     }
 
@@ -36,7 +38,9 @@ class uiButton extends uiComponents {
     buildUI(commandInterface) {
         const controlButton = document.createElement('div');
         controlButton.className = 'control-btn';
-        // controlButton.setAttribute('onclick', `buttonClicked(event,${this.target}, 1)`);
+        controlButton.addEventListener('click', (event) => {
+            this.handleClick(event);
+        });
         controlButton.innerHTML = `<div></div><button>${this.label}</button>`;
         commandInterface.appendChild(controlButton);
     }
@@ -50,5 +54,25 @@ class uiButton extends uiComponents {
         buffer.push(0x00);
 
         return buffer;
+    }
+
+    handleClick() {
+        this.value = this.value?false:true;
+
+        const cmdPkt = new Uint8Array(9);
+        cmdPkt[0] = 0x01;
+        cmdPkt[1] = 0;
+        cmdPkt[2] = 7;
+        cmdPkt[3] = this.tc;
+        cmdPkt[4] = 0;
+        cmdPkt[5] = (this.id >> 8) & 0xFF;
+        cmdPkt[6] = this.id & 0xFF;
+        cmdPkt[7] = 1;
+        cmdPkt[8] = this.value;
+
+        console.log(cmdPkt) //testing
+        if (!testing) { //testing
+        socket.send(cmdPkt);
+        } //testing
     }
 }

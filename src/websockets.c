@@ -272,16 +272,14 @@ err_t handle_websocket_msg(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_
             config_element_iterator itr;
             config_element_iterator_init(&itr, payload+3, data_length);
             
-            uint32_t value = 1 << 24;
-            multicore_fifo_push_blocking(value);
-
             while (itr.next(&itr)) {
                 // printf("value %i [%X %X %X %X]\n", iValue, *(payload+(7+iValue*4)), *(payload+(8+iValue*4)), *(payload+(9+iValue*4)), *(payload+(10+iValue*4)));
-                uint32_t value = itr.type << 24
+                uint32_t hwop_buf = CONFIG_OPERATION_CONTROL_ACTION << 30
+                    | (itr.type & 0x1F) << 24
                     | (itr.id>>8 & 0xFF) << 16
                     | (itr.id>>0 & 0xFF) << 8
                     | itr.pay[0];
-                multicore_fifo_push_blocking(value);
+                multicore_fifo_push_blocking(hwop_buf);
 
                 for (size_t i = 1; i < itr.len; i+=4) {
                     uint32_t value = itr.pay[i] << 24

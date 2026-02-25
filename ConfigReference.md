@@ -32,7 +32,7 @@ a single byte and always transmitted in the first byte.
 +-----+------+-----------------------+--------------+
 | Dec | Hex  | Type                  | Use Messages |
 +-----+------+-----------------------+--------------+
-|  1  | 0x01 | Command               | No           |
+|  1  | 0x01 | Command               | Yes          |
 |  2  | 0x02 | Data Value            | No           |
 | 10  | 0x0A | Configuration         | Yes          |
 | 11  | 0x0B | Update Config Field/s | Yes          |
