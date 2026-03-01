@@ -382,7 +382,23 @@ void unmarshal_controls(const uint8_t* data, size_t length) {
                 | ((CONTROL_TYPE_LED & 0x1F) << 24)
                 | (itr.pay[0]<<16 | itr.pay[1]<<8);
 
-            printf("send %X\n",control_setup_msg);
+            printf("send hw LED setup %X\n",control_setup_msg);
+            multicore_fifo_push_blocking(control_setup_msg);
+            break;
+        
+        case CONTROL_TYPE_GPO:
+            if (itr.len != 3) break;
+
+            control_setup_msg = (CONFIG_OPERATION_TYPE_SETUP << 30)
+                | ((CONTROL_TYPE_GPO & 0x1F) << 24)
+                | (itr.pay[0]<<16 | itr.pay[1]<<8);
+
+            printf("send hw GPO setup %X\n",control_setup_msg);
+            multicore_fifo_push_blocking(control_setup_msg);
+
+            control_setup_msg = itr.pay[2];
+
+            printf("send hw GPO setup %X\n",control_setup_msg);
             multicore_fifo_push_blocking(control_setup_msg);
             break;
         

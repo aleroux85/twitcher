@@ -296,10 +296,12 @@ svg.addEventListener('wheel', function (e) {
 });
 
 new uiButton(-200, -40);
-new uiLed(100, 40);
+new uiLED(100, 40);
+new uiGPO(200, 40);
 
 // saveGraph();
 
 // toGraph();
 
 createEdge("n2","n1")
+createEdge("n1","n3")

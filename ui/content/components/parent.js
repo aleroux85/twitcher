@@ -126,3 +126,5 @@ class uiComponents {
 /* {{button-js}} */
 
 /* {{led-js}} */
+
+/* {{gpo-js}} */

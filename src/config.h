@@ -40,7 +40,7 @@ typedef enum {
 
 typedef enum {
     CONTROL_TYPE_LED = 0x20,
-    CONTROL_TYPE_GPIO = 0x21,
+    CONTROL_TYPE_GPO = 0x21,
     CONTROL_TYPE_PWM = 0x22
 } PayloadType;
 

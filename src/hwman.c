@@ -39,7 +39,7 @@ typedef struct {
         uint8_t control_type;
         // uint8_t n_values;
     };
-    // uint8_t io;
+    uint8_t io;
     union {
         uint16_t id;
         // uint16_t param;
@@ -124,11 +124,15 @@ void core1_worker() {
             
             switch (decop.operation) {
             case CONFIG_OPERATION_TYPE_SETUP:
-                // switch (decop.control_type) {
-                // case CONTROL_TYPE_GPIO:
-                //     gpio_init(decop.io);
-                //     gpio_set_dir(decop.io, GPIO_OUT);
-                //     break;
+                switch (decop.control_type) {
+                case CONTROL_TYPE_GPO:
+                    uint32_t io;
+                    multicore_fifo_pop_timeout_us(1000, &io);
+                    decop.io = io & 0xFF;
+
+                    gpio_init(decop.io);
+                    gpio_set_dir(decop.io, GPIO_OUT);
+                    break;
                 
                 // case CONTROL_TYPE_PWM:
                 //     gpio_set_function(decop.io, GPIO_FUNC_PWM);
@@ -166,9 +170,9 @@ void core1_worker() {
                 //     pwm_set_enabled(slice_num, true);
                 //     break;
                 
-                // default:
-                //     break;
-                // }
+                default:
+                    break;
+                }
 
                 add_packet(&decop);
                 printf("hw man adding control type %02X on ID %i\n",decop.control_type,decop.id);
@@ -209,10 +213,10 @@ void core1_worker() {
                         multicore_fifo_push_blocking(decop.value);
                         break;
                     
-                    // case CONTROL_TYPE_GPIO:
-                    //     printf("switch GPIO, value:%i\n",values[0]);
-                    //     gpio_put(pkt->io,values[0]);
-                    //     break;
+                    case CONTROL_TYPE_GPO:
+                        printf("switch GPO %d, value:%i\n",decop.io, decop.value);
+                        gpio_put(decop.io,decop.value);
+                        break;
                     
                     // case CONTROL_TYPE_PWM:
                     //     // printf("control PWM, value:%i\n",values[0]);
