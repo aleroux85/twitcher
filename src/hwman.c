@@ -35,69 +35,93 @@ float read_internal_temperature() {
 
 typedef struct {
     uint8_t operation;
+    uint8_t control_type;
+    uint16_t id;
     union {
-        uint8_t control_type;
-        // uint8_t n_values;
+        uint8_t io;
+        uint8_t value;
     };
-    uint8_t io;
-    union {
-        uint16_t id;
-        // uint16_t param;
-    };
-    uint8_t value;
-    // uint16_t val0;
-    // uint16_t val1;
-    // uint16_t clksteps;
-    // float grad;
-    // uint16_t offset;
+    uint16_t source_id;
+} hwel;
+
+typedef struct {
+    uint16_t id;
+    uint8_t len;
+    uint8_t size;
+    hwel *hwels;
 
     UT_hash_handle hh;
-} hwop;
+} hwel_sources;
 
-hwop decode_hwop(uint32_t packet) {
-    hwop result;
+hwel decode_hwel(uint32_t op) {
+    hwel result;
 
-    result.operation    = (packet >> 30) & 0x03;
-    result.control_type = ((packet >> 24) & 0x1F) | 0x20;
-    result.id = (packet >> 8)  & 0xFFFF;
-    // result.io           = (packet >> 27) & 0xFF;
-    result.value        = (packet >> 0)  & 0xFF;
+    result.operation    = (op >> 30) & 0x03;
+    result.control_type = ((op >> 24) & 0x1F) | 0x20;
+    result.id = (op >> 8)  & 0xFFFF;
+    result.value        = (op >> 0)  & 0xFF;
 
     return result;
 }
 
-static hwop *packet_table = NULL;
+void decode_hwrf(uint32_t rf,hwel *decop) {
+    decop->source_id = (rf >> 16)  & 0xFFFF;
+}
 
-void add_packet(hwop *op) {
+static hwel_sources *hwel_source_table = NULL;
+
+void add_packet(hwel el) {
     // First check if one with the same ID already exists
-    hwop *existing = NULL;
-    HASH_FIND(hh, packet_table, &op->id, sizeof(uint16_t), existing);
+    hwel_sources *existing = NULL;
+    HASH_FIND(hh, hwel_source_table, el.source_id, sizeof(uint16_t), existing);
     if (existing) {
-        // Replace the old packet
-        HASH_DEL(packet_table, existing);
-        free(existing);
+        if (existing->len == existing->size) {
+            existing->size += 5;
+            int *temp = realloc(existing->hwels, existing->size * sizeof(hwel_sources));
+            if (temp == NULL) {
+                printf("hwel reallocation failed\n");
+                free(existing->hwels);
+                return 1;
+            }
+            existing->hwels = temp;
+
+            existing->len++;
+            existing->hwels[existing->len-1] = el;
+        }
     }
 
-    // Allocate and copy
-    hwop *new_op = malloc(sizeof(hwop));
-    if (!new_op) return;  // handle allocation failure
-    *new_op = *op;
-    HASH_ADD(hh, packet_table, id, sizeof(uint16_t), new_op);
-}
-
-hwop *find_packet(uint16_t id) {
-    hwop *op = NULL;
-    HASH_FIND(hh, packet_table, &id, sizeof(uint16_t), op);
-    return op; // may be NULL
-}
-
-void delete_all_packets() {
-    hwop *current, *tmp;
-    HASH_ITER(hh, packet_table, current, tmp) {
-        HASH_DEL(packet_table, current);
-        free(current);
+    hwel_sources *new_srcsel = malloc(sizeof(hwel_sources));
+    if (new_srcsel == NULL) {
+        printf("hwel_sources allocation failed\n");
+        return 1;
     }
+
+    new_srcsel->size = 5;
+    new_srcsel->len = 1;
+    new_srcsel->hwels = malloc(new_srcsel->size * sizeof(hwel));
+    if (new_srcsel->hwels == NULL) {
+        printf("hwel allocation failed\n");
+        return 1;
+    }
+    new_srcsel->hwels[new_srcsel->len-1] = el;
+    new_srcsel->id = el.source_id;
+
+    HASH_ADD(hh, hwel_source_table, id, sizeof(uint16_t), new_srcsel);
 }
+
+hwel_sources *find_packet(uint16_t id) {
+    hwel_sources *srcsel = NULL;
+    HASH_FIND(hh, hwel_source_table, &id, sizeof(uint16_t), srcsel);
+    return srcsel;
+}
+
+// void delete_all_packets() {
+//     hwel *current, *tmp;
+//     HASH_ITER(hh, packet_table, current, tmp) {
+//         HASH_DEL(packet_table, current);
+//         free(current);
+//     }
+// }
 
 void core1_worker() {
     printf("(core1) started\n");
@@ -119,16 +143,22 @@ void core1_worker() {
 
         uint32_t op;
         if (multicore_fifo_pop_timeout_us(1000, &op)) {
-            hwop decop = decode_hwop(op);
+            hwel decop = decode_hwel(op);
             // printf("hw opp %d type %d, io %d\n",decop.operation, decop.control_type, decop.io);
             
             switch (decop.operation) {
             case CONFIG_OPERATION_TYPE_SETUP:
                 switch (decop.control_type) {
+                case CONTROL_TYPE_LED:
+                    uint32_t rf;
+                    multicore_fifo_pop_timeout_us(1000, &rf);
+                    decode_hwrf(rf,&decop);
+                    break;
+
                 case CONTROL_TYPE_GPO:
-                    uint32_t io;
-                    multicore_fifo_pop_timeout_us(1000, &io);
-                    decop.io = io & 0xFF;
+                    uint32_t rf;
+                    multicore_fifo_pop_timeout_us(1000, &rf);
+                    decode_hwrf(rf,&decop);
 
                     gpio_init(decop.io);
                     gpio_set_dir(decop.io, GPIO_OUT);
@@ -174,7 +204,7 @@ void core1_worker() {
                     break;
                 }
 
-                add_packet(&decop);
+                add_packet(decop);
                 printf("hw man adding control type %02X on ID %i\n",decop.control_type,decop.id);
                 break;
 
@@ -203,10 +233,10 @@ void core1_worker() {
 
                 printf("hw man finding ID %d\n",decop.id);
                 
-                hwop *stored_op = find_packet(decop.id);
-                printf("hw man found type %02X with ID %d\n",stored_op->control_type,stored_op->id);
-                if (stored_op) {
-                    switch (stored_op->control_type) {
+                hwel *stored_el = find_packet(decop.id);
+                printf("hw man found type %02X with ID %d\n",stored_el->control_type,stored_el->id);
+                if (stored_el) {
+                    switch (stored_el->control_type) {
                     case CONTROL_TYPE_LED:
                         printf("switch LED, value:%i\n",decop.value);
                         multicore_fifo_push_blocking(2);

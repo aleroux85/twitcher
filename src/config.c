@@ -380,10 +380,15 @@ void unmarshal_controls(const uint8_t* data, size_t length) {
 
             control_setup_msg = (CONFIG_OPERATION_TYPE_SETUP << 30)
                 | ((CONTROL_TYPE_LED & 0x1F) << 24)
-                | (itr.pay[0]<<16 | itr.pay[1]<<8);
+                | (itr.id>>8 & 0xFF) << 16
+                | (itr.id>>0 & 0xFF) << 8;
 
-            printf("send hw LED setup %X\n",control_setup_msg);
             multicore_fifo_push_blocking(control_setup_msg);
+            printf("send hw LED setup %X\n",control_setup_msg);
+            
+            control_setup_msg =  (itr.pay[0]<<24 | itr.pay[1]<<16);
+            multicore_fifo_push_blocking(control_setup_msg);
+            printf("send hw LED setup %X\n",control_setup_msg);
             break;
         
         case CONTROL_TYPE_GPO:
@@ -391,15 +396,17 @@ void unmarshal_controls(const uint8_t* data, size_t length) {
 
             control_setup_msg = (CONFIG_OPERATION_TYPE_SETUP << 30)
                 | ((CONTROL_TYPE_GPO & 0x1F) << 24)
-                | (itr.pay[0]<<16 | itr.pay[1]<<8);
+                | (itr.id>>8 & 0xFF) << 16
+                | (itr.id>>0 & 0xFF) << 8
+                | itr.pay[2];
 
-            printf("send hw GPO setup %X\n",control_setup_msg);
             multicore_fifo_push_blocking(control_setup_msg);
-
-            control_setup_msg = itr.pay[2];
-
             printf("send hw GPO setup %X\n",control_setup_msg);
+
+            control_setup_msg = (itr.pay[0]<<24 | itr.pay[1]<<16);
+
             multicore_fifo_push_blocking(control_setup_msg);
+            printf("send hw GPO setup %X\n",control_setup_msg);
             break;
         
         default:
