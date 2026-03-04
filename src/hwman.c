@@ -73,37 +73,42 @@ static hwel_sources *hwel_source_table = NULL;
 void add_packet(hwel el) {
     // First check if one with the same ID already exists
     hwel_sources *existing = NULL;
-    HASH_FIND(hh, hwel_source_table, el.source_id, sizeof(uint16_t), existing);
+    HASH_FIND(hh, hwel_source_table, &el.source_id, sizeof(uint16_t), existing);
     if (existing) {
         if (existing->len == existing->size) {
             existing->size += 5;
-            int *temp = realloc(existing->hwels, existing->size * sizeof(hwel_sources));
+            hwel *temp = realloc(existing->hwels, existing->size * sizeof(hwel_sources));
             if (temp == NULL) {
                 printf("hwel reallocation failed\n");
                 free(existing->hwels);
-                return 1;
+                return;
             }
             existing->hwels = temp;
 
-            existing->len++;
-            existing->hwels[existing->len-1] = el;
         }
+        printf("adding another hwel allocation to src_id:%d, type:%02X, id:%d\n",existing->id, el.control_type,el.id);
+        existing->len++;
+        existing->hwels[existing->len-1] = el;
+
+        return;
     }
 
+    printf("new hwel_sources allocation, src_id:%d\n",el.source_id);
     hwel_sources *new_srcsel = malloc(sizeof(hwel_sources));
     if (new_srcsel == NULL) {
         printf("hwel_sources allocation failed\n");
-        return 1;
+        return;
     }
 
     new_srcsel->size = 5;
     new_srcsel->len = 1;
+    printf("adding hwel allocation, type:%02X, id:%d\n",el.control_type,el.id);
     new_srcsel->hwels = malloc(new_srcsel->size * sizeof(hwel));
     if (new_srcsel->hwels == NULL) {
         printf("hwel allocation failed\n");
-        return 1;
+        return;
     }
-    new_srcsel->hwels[new_srcsel->len-1] = el;
+    new_srcsel->hwels[0] = el;
     new_srcsel->id = el.source_id;
 
     HASH_ADD(hh, hwel_source_table, id, sizeof(uint16_t), new_srcsel);
@@ -115,13 +120,14 @@ hwel_sources *find_packet(uint16_t id) {
     return srcsel;
 }
 
-// void delete_all_packets() {
-//     hwel *current, *tmp;
-//     HASH_ITER(hh, packet_table, current, tmp) {
-//         HASH_DEL(packet_table, current);
-//         free(current);
-//     }
-// }
+void delete_all_packets() {
+    hwel_sources *current, *tmp;
+    HASH_ITER(hh, hwel_source_table, current, tmp) {
+        free(current->hwels);
+        HASH_DEL(hwel_source_table, current);
+        free(current);
+    }
+}
 
 void core1_worker() {
     printf("(core1) started\n");
@@ -150,15 +156,13 @@ void core1_worker() {
             case CONFIG_OPERATION_TYPE_SETUP:
                 switch (decop.control_type) {
                 case CONTROL_TYPE_LED:
-                    uint32_t rf;
-                    multicore_fifo_pop_timeout_us(1000, &rf);
-                    decode_hwrf(rf,&decop);
+                    multicore_fifo_pop_timeout_us(1000, &op);
+                    decode_hwrf(op,&decop);
                     break;
 
                 case CONTROL_TYPE_GPO:
-                    uint32_t rf;
-                    multicore_fifo_pop_timeout_us(1000, &rf);
-                    decode_hwrf(rf,&decop);
+                    multicore_fifo_pop_timeout_us(1000, &op);
+                    decode_hwrf(op,&decop);
 
                     gpio_init(decop.io);
                     gpio_set_dir(decop.io, GPIO_OUT);
@@ -233,38 +237,42 @@ void core1_worker() {
 
                 printf("hw man finding ID %d\n",decop.id);
                 
-                hwel *stored_el = find_packet(decop.id);
-                printf("hw man found type %02X with ID %d\n",stored_el->control_type,stored_el->id);
-                if (stored_el) {
-                    switch (stored_el->control_type) {
-                    case CONTROL_TYPE_LED:
-                        printf("switch LED, value:%i\n",decop.value);
-                        multicore_fifo_push_blocking(2);
-                        multicore_fifo_push_blocking(decop.value);
-                        break;
-                    
-                    case CONTROL_TYPE_GPO:
-                        printf("switch GPO %d, value:%i\n",decop.io, decop.value);
-                        gpio_put(decop.io,decop.value);
-                        break;
-                    
-                    // case CONTROL_TYPE_PWM:
-                    //     // printf("control PWM, value:%i\n",values[0]);
-                    //     if (values[0] < pkt->val0) {values[0] = pkt->val0;}
-                    //     if (values[0] > pkt->val1) {values[0] = pkt->val1;}
-                    //     float dcx = (values[0]-pkt->val0)*pkt->grad + pkt->offset;
-                    //     uint32_t lvl = (uint32_t)((dcx/100.0f)*pkt->clksteps);
-
-                    //     uint slice_num = pwm_gpio_to_slice_num(pkt->io);
-                    //     uint channel = pwm_gpio_to_channel(pkt->io);
-                    //     pwm_set_chan_level(slice_num, channel, lvl);
-                    //     break;
-
-                    default:
-                        break;
+                hwel_sources *hw_srcs = find_packet(decop.id);
+                if (hw_srcs) {
+                    for (size_t i = 0; i < hw_srcs->len; i++) {
+                        hwel el = hw_srcs->hwels[i];
+    
+                        printf("hw man found type %02X with ID %d\n",el.control_type,el.id);
+                        switch (el.control_type) {
+                        case CONTROL_TYPE_LED:
+                            printf("switch LED, value:%i\n",decop.value);
+                            multicore_fifo_push_blocking(2);
+                            multicore_fifo_push_blocking(decop.value);
+                            break;
+                        
+                        case CONTROL_TYPE_GPO:
+                            printf("switch GPO %d, value:%i\n",el.io, decop.value);
+                            gpio_put(el.io,decop.value);
+                            break;
+                        
+                        // case CONTROL_TYPE_PWM:
+                        //     // printf("control PWM, value:%i\n",values[0]);
+                        //     if (values[0] < pkt->val0) {values[0] = pkt->val0;}
+                        //     if (values[0] > pkt->val1) {values[0] = pkt->val1;}
+                        //     float dcx = (values[0]-pkt->val0)*pkt->grad + pkt->offset;
+                        //     uint32_t lvl = (uint32_t)((dcx/100.0f)*pkt->clksteps);
+    
+                        //     uint slice_num = pwm_gpio_to_slice_num(pkt->io);
+                        //     uint channel = pwm_gpio_to_channel(pkt->io);
+                        //     pwm_set_chan_level(slice_num, channel, lvl);
+                        //     break;
+    
+                        default:
+                            break;
+                        }
                     }
                 } else {
-                    // Not found, handle gracefully
+                    printf("hw sources with ID %d not found\n",decop.id);
                 }
             }
         }

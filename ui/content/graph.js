@@ -32,9 +32,8 @@ function saveGraph() {
     wsConfigMsg.set(gfig, 3);
     wsConfigMsg.set(binary, 3 + gfig.length);
 
-    if (testing) { //testing
-        console.log(wsConfigMsg) //testing
-    } else { //testing
+    console.log(wsConfigMsg) //testing
+    if (!testing) { //testing
     socket.send(wsConfigMsg);
     } //testing
 }
