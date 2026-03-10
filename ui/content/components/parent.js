@@ -58,11 +58,13 @@ class uiComponents {
         this[this.actDir][this.actNum].r = r;
         this[this.actDir][this.actNum].x = 50*Math.cos(r);
         this[this.actDir][this.actNum].y = 50*Math.sin(r);
+        this[this.actDir][this.actNum].xh = 100*Math.cos(r);
+        this[this.actDir][this.actNum].yh = 100*Math.sin(r);
     }
 
     wireCoords(r = 0) {
         const a = this[this.actDir][this.actNum];
-        return [this.x + a.x, this.y - a.y];
+        return [this.x + a.x, this.y - a.y, this.x + a.xh, this.y - a.yh];
     }
 
     setWire(conn,elm) {

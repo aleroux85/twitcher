@@ -103,8 +103,8 @@ function createEdge(id1,id2) {
     const r = Math.atan2(-dy,dx);
     el1.setWireAngle(r);
     el2.setWireAngle(r+Math.PI);
-    const [x1, y1] = el1.wireCoords();
-    const [x2, y2] = el2.wireCoords();
+    const [x1, y1, xh1, yh1] = el1.wireCoords();
+    const [x2, y2, xh2, yh2] = el2.wireCoords();
 
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.classList.add('edge');
@@ -115,7 +115,7 @@ function createEdge(id1,id2) {
     // use.children[0].setAttribute('d', `M ${el1.x} ${el1.y} L ${el2.x} ${el2.y}`);
     // g.appendChild(use);
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
+    path.setAttribute('d', `M ${x1},${y1} C ${xh1},${yh1} ${xh2},${yh2} ${x2},${y2}`);
     path.setAttribute('stroke', '#BFCDE7');
     path.setAttribute('stroke-width', 1.8);
     g.appendChild(path);
