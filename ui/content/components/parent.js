@@ -96,21 +96,17 @@ class uiComponents {
         this.gElm.setAttribute('transform', `translate(${this.x} ${this.y}) rotate(${this.r || 0})`);
         this.outputs.forEach(output => {
             const d = output.elm.children[0].getAttribute('d');
-            const match = d.match(/L\s*([-\d.]+)[ ,]+([-\d.]+)/);
+            const match = d.match(/C\s[-\d.]+,[-\d.]+\s([-\d.]+),([-\d.]+)\s([-\d.]+),([-\d.]+)/);
             if (!match) return;
-            const a = match[1];
-            const b = match[2];
-            const [x, y] = this.wireCoords();
-            output.elm.children[0].setAttribute('d', `M ${x} ${y} L ${a} ${b}`);
+            const [x, y, xh, yh] = this.wireCoords();
+            output.elm.children[0].setAttribute('d', `M ${x},${y} C ${xh},${yh} ${match[1]},${match[2]} ${match[3]},${match[4]}`);
         });
         this.inputs.forEach(input => {
             const d = input.elm.children[0].getAttribute('d');
-            const match = d.match(/M\s*([-\d.]+)[ ,]+([-\d.]+)/);
+            const match = d.match(/M\s([-\d.]+),([-\d.]+)\sC\s([-\d.]+),([-\d.]+)/);
             if (!match) return;
-            const a = match[1];
-            const b = match[2];
-            const [x, y] = this.wireCoords();
-            input.elm.children[0].setAttribute('d', `M ${a} ${b} L ${x} ${y}`);
+            const [x, y, xh, yh] = this.wireCoords();
+            input.elm.children[0].setAttribute('d', `M ${match[1]},${match[2]} C ${match[3]},${match[4]} ${xh},${yh} ${x},${y}`);
         });
         // updatePropsPanel();
     }

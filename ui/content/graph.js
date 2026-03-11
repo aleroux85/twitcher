@@ -118,6 +118,7 @@ function createEdge(id1,id2) {
     path.setAttribute('d', `M ${x1},${y1} C ${xh1},${yh1} ${xh2},${yh2} ${x2},${y2}`);
     path.setAttribute('stroke', '#BFCDE7');
     path.setAttribute('stroke-width', 1.8);
+    path.setAttribute('fill', 'none');
     g.appendChild(path);
     // const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     // label.setAttribute('x', 0);
