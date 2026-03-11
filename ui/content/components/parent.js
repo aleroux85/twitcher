@@ -34,22 +34,27 @@ class uiComponents {
     }
 
     highlight(s) {
+        const settings = document.getElementById('settings');
+
         switch (s) {
             case 'select':
                 this.marked = false;
                 this.gElmHighlight.style.display = 'block';
-                this.gElmHighlight.setAttribute('stroke','#BFCDE7')
+                this.gElmHighlight.setAttribute('stroke','#BFCDE7');
+                settings.innerHTML = `<h3>Settings here</h3>`;
                 break;
 
             case 'mark':
                 this.marked = true;
                 this.gElmHighlight.style.display = 'block';
-                this.gElmHighlight.setAttribute('stroke','#4CAF50')
+                this.gElmHighlight.setAttribute('stroke','#4CAF50');
+                settings.innerHTML = "";
                 break;
         
             default:
                 this.marked = false;
                 this.gElmHighlight.style.display = 'none';
+                settings.innerHTML = "";
                 break;
         }
     }
