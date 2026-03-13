@@ -8,6 +8,7 @@ function setView() { svg.setAttribute('viewBox', [viewBox.x, viewBox.y, viewBox.
 setView();
 
 let elements = {}; // {id,type,x,y,r,label,value}
+let gEdges = [];
 let idCounter = 1;
 let idEdgeCounter = 1;
 let selected = null;
@@ -94,32 +95,34 @@ function createEdge(id1,id2) {
     let el1 = elements[id1];
     let el2 = elements[id2];
 
-    if (el1.actDir === "inputs") {
-        [el1,el2] = [el2,el1];
-    }
+    new gEdge(el1, el2);
 
-    const dx = el2.x - el1.x;
-    const dy = el2.y - el1.y;
-    const r = Math.atan2(-dy,dx);
-    el1.setWireAngle(r);
-    el2.setWireAngle(r+Math.PI);
-    const [x1, y1, xh1, yh1] = el1.wireCoords();
-    const [x2, y2, xh2, yh2] = el2.wireCoords();
+    // if (el1.actDir === "inputs") {
+    //     [el1,el2] = [el2,el1];
+    // }
 
-    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.classList.add('edge');
-    g.dataset.id = 'e'+idEdgeCounter++;
-    g.dataset.type = 'wire';
+    // const dx = el2.x - el1.x;
+    // const dy = el2.y - el1.y;
+    // const r = Math.atan2(-dy,dx);
+    // el1.setWireAngle(r);
+    // el2.setWireAngle(r+Math.PI);
+    // const [x1, y1, xh1, yh1] = el1.wireCoords();
+    // const [x2, y2, xh2, yh2] = el2.wireCoords();
+
+    // const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    // g.classList.add('edge');
+    // g.dataset.id = 'e'+idEdgeCounter++;
+    // g.dataset.type = 'wire';
     // const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
     // use.setAttribute('href', '#sym-wire');
     // use.children[0].setAttribute('d', `M ${el1.x} ${el1.y} L ${el2.x} ${el2.y}`);
     // g.appendChild(use);
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', `M ${x1},${y1} C ${xh1},${yh1} ${xh2},${yh2} ${x2},${y2}`);
-    path.setAttribute('stroke', '#BFCDE7');
-    path.setAttribute('stroke-width', 1.8);
-    path.setAttribute('fill', 'none');
-    g.appendChild(path);
+    // const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    // path.setAttribute('d', `M ${x1},${y1} C ${xh1},${yh1} ${xh2},${yh2} ${x2},${y2}`);
+    // path.setAttribute('stroke', '#BFCDE7');
+    // path.setAttribute('stroke-width', 1.8);
+    // path.setAttribute('fill', 'none');
+    // g.appendChild(path);
     // const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     // label.setAttribute('x', 0);
     // label.setAttribute('y', 36);
@@ -144,11 +147,12 @@ function createEdge(id1,id2) {
 
     // pointer interactions
     // g.addEventListener('pointerdown', nodePointerDown);
-    nodes.insertBefore(g,nodes.children[0]);
+    // nodes.insertBefore(g,nodes.children[0]);
 
-    el1.setWire(el2,g);
-    el2.setWire(el1,g);
-    return g;
+    // el1.setWire(el2,g);
+    // el2.setWire(el1,g);
+
+    // return g;
 }
 
 // render nodes from elements
@@ -303,5 +307,5 @@ new uiGPO(200, 40);
 
 // toGraph();
 
-createEdge("n2","n1")
-createEdge("n1","n3")
+// createEdge("n2","n1")
+// createEdge("n1","n3")

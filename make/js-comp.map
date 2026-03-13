@@ -1,3 +1,5 @@
+{{edge-js}}:ui/content/components/edge.js
+{{parent-js}}:ui/content/components/parent.js
 {{button-js}}:ui/content/components/button.js
 {{led-js}}:ui/content/components/led.js
 {{gpo-js}}:ui/content/components/gpo.js
