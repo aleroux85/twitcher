@@ -2,6 +2,8 @@ class gEdge {
     constructor(n1, n2) {
         this.id = idEdgeCounter++;
         this.name = 'n' + this.id;
+        this.start = {};
+        this.end = {};
 
         if (n1.actDir === "inputs") {
             [n1,n2] = [n2,n1];
@@ -13,14 +15,17 @@ class gEdge {
         const dx = n2.x - n1.x;
         const dy = n2.y - n1.y;
         this.start.angle = Math.atan2(-dy,dx);
-        this.end.angle = this.sAngle+Math.PI;
+        this.end.angle = this.start.angle+Math.PI;
 
-        n1.AddEgde(this);
+        this.elm = this.drawEdge();
+
+        n1.addEdge(this);
+        n2.addEdge(this);
 
         gEdges.push(this);
     }
 
-    drawEdge(x, y) {
+    drawEdge() {
         const nodes = document.getElementById('nodes');
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -39,6 +44,23 @@ class gEdge {
         g.appendChild(path);
 
         nodes.insertBefore(g,nodes.children[0]);
+        return g;
+    }
+
+    moveStart() {
+        const d = this.elm.children[0].getAttribute('d');
+        const match = d.match(/C\s[-\d.]+,[-\d.]+\s([-\d.]+),([-\d.]+)\s([-\d.]+),([-\d.]+)/);
+        if (!match) return;
+        const [x, y, xh, yh] = this.wireCoords(this.start);
+        this.elm.children[0].setAttribute('d', `M ${x},${y} C ${xh},${yh} ${match[1]},${match[2]} ${match[3]},${match[4]}`);
+    }
+
+    moveEnd() {
+        const d = this.elm.children[0].getAttribute('d');
+        const match = d.match(/M\s([-\d.]+),([-\d.]+)\sC\s([-\d.]+),([-\d.]+)/);
+        if (!match) return;
+        const [x, y, xh, yh] = this.wireCoords(this.end);
+        this.elm.children[0].setAttribute('d', `M ${match[1]},${match[2]} C ${match[3]},${match[4]} ${xh},${yh} ${x},${y}`);
     }
 
     wireCoords(n) {
