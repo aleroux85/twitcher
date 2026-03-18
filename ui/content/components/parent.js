@@ -57,21 +57,21 @@ class uiComponents {
     }
 
     addEdge(e) {
-        this[this.actDir][this.actNum].connections = e;
+        this[this.actDir][this.actNum].conns.push(e);
     }
 
     nodePointerDown(e) {
         e.stopPropagation();
-        // this.setPointerCapture(e.pointerId);
-        // const id = this.dataset.id;
-        // const el = elements[id];
         selectById(this.id);
         this.dragging = true;
-        // pointerState.node = el;
         this.draggingStart = svgPoint(e);
         this.draggingOrig = { x: this.x, y: this.y };
-        this.gElm.addEventListener('pointermove', (e) => this.nodePointerMove(e));
-        this.gElm.addEventListener('pointerup', (e) => this.nodePointerUp(e));
+
+        this._onNodePointerMove = (e) => this.nodePointerMove(e);
+        this._onNodePointerUp = (e) => this.nodePointerUp(e);
+
+        this.gElm.addEventListener('pointermove', this._onNodePointerMove);
+        this.gElm.addEventListener('pointerup', this._onNodePointerUp);
     }
 
     nodePointerMove(e) {
@@ -80,22 +80,25 @@ class uiComponents {
         const dx = p.x - this.draggingStart.x, dy = p.y - this.draggingStart.y;
         this.x = this.draggingOrig.x + dx;
         this.y = this.draggingOrig.y + dy;
-        // updateNodeTransform();
         this.gElm.setAttribute('transform', `translate(${this.x} ${this.y}) rotate(${this.r || 0})`);
         this.outputs.forEach(output => {
-            output.connections.moveStart();
+            output.conns.forEach(conn => {
+                conn.moveStart();
+            });
         });
         this.inputs.forEach(input => {
-            input.connections.moveEnd();
+            input.conns.forEach(conn => {
+                conn.moveEnd();
+            });
         });
-        // updatePropsPanel();
     }
 
     nodePointerUp(e) {
         if (this.dragging) {
-            try { this.gElm.removeEventListener('pointermove', this.nodePointerMove);
-                this.gElm.removeEventListener('pointerup', this.nodePointerUp);
-            } catch (e) { }
+            this.gElm.removeEventListener('pointermove', this._onNodePointerMove);
+            this.gElm.removeEventListener('pointerup', this._onNodePointerUp);
+            delete this._onNodePointerMove;
+            delete this._onNodePointerUp;
         }
         this.dragging = false;
     }
