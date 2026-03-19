@@ -19,6 +19,10 @@ class uiComponents {
         elements[this.name] = this;
     }
 
+    canTakeConn(connType){
+        return true;
+    }
+
     setCoords(x = 0, y = 0) {
         this.x = x;
         this.y = y;
@@ -40,7 +44,18 @@ class uiComponents {
             case 'select':
                 this.marked = false;
                 this.gElmHighlight.style.display = 'block';
-                this.gElmHighlight.setAttribute('stroke','#BFCDE7')
+                this.gElmHighlight.setAttribute('stroke','#BFCDE7');
+
+                this.outputs.forEach(output => {
+                    output.conns.forEach(conn => {
+                        conn.start.handleDisplay(true);
+                    });
+                });
+                this.inputs.forEach(input => {
+                    if (input.conn) {
+                        input.conn.end.handleDisplay(true);
+                    }
+                });
                 break;
 
             case 'mark':
@@ -52,12 +67,27 @@ class uiComponents {
             default:
                 this.marked = false;
                 this.gElmHighlight.style.display = 'none';
+
+                this.outputs.forEach(output => {
+                    output.conns.forEach(conn => {
+                        conn.start.handleDisplay(false);
+                    });
+                });
+                this.inputs.forEach(input => {
+                    if (input.conn) {
+                        input.conn.end.handleDisplay(false);
+                    }
+                });
                 break;
         }
     }
 
     addEdge(e) {
-        this[this.actDir][this.actNum].conns.push(e);
+        if (this.actDir === 'outputs') {
+            this[this.actDir][this.actNum].conns.push(e);
+        } else {
+            this[this.actDir][this.actNum].conn = e;
+        }
     }
 
     nodePointerDown(e) {
@@ -87,9 +117,9 @@ class uiComponents {
             });
         });
         this.inputs.forEach(input => {
-            input.conns.forEach(conn => {
-                conn.moveEnd();
-            });
+            if (input.conn) {
+                input.conn.moveEnd();
+            }
         });
     }
 

@@ -11,8 +11,10 @@ class gEdge {
 
         this.start.node = n1;
         this.start.mvfunc = () => this.moveStart();
+        this.start.handleDisplay = (display) => display?this.elm.children[1].classList.remove('hide'):this.elm.children[1].classList.add('hide');
         this.end.node = n2;
         this.end.mvfunc = () => this.moveEnd();
+        this.end.handleDisplay = (display) => display?this.elm.children[2].classList.remove('hide'):this.elm.children[2].classList.add('hide');
 
         const dx = n2.x - n1.x;
         const dy = n2.y - n1.y;
@@ -52,9 +54,10 @@ class gEdge {
         sHandle.setAttribute('stroke', '#BFCDE7');
         sHandle.setAttribute('stroke-width', 0.8);
         sHandle.setAttribute('fill', '#BFCDE711');
+        sHandle.classList.add('hide');
         sHandle.addEventListener('pointerdown', (e) => this.handlePointerDown(e,this.start));
         g.appendChild(sHandle);
-
+        
         const eHandle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         eHandle.setAttribute('cx', `${xh2}`);
         eHandle.setAttribute('cy', `${yh2}`);
@@ -62,11 +65,16 @@ class gEdge {
         eHandle.setAttribute('stroke', '#BFCDE7');
         eHandle.setAttribute('stroke-width', 0.8);
         eHandle.setAttribute('fill', '#BFCDE711');
+        eHandle.classList.add('hide');
         eHandle.addEventListener('pointerdown', (e) => this.handlePointerDown(e,this.end));
         g.appendChild(eHandle);
 
         nodes.insertBefore(g,nodes.children[0]);
         return g;
+    }
+
+    handleDisplay(end, display) {
+
     }
 
     moveStart() {

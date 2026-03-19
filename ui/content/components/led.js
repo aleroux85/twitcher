@@ -7,8 +7,7 @@ class uiLED extends uiComponents {
         this.inputs.push(
             {
                 type:"bool",
-                conns:[],
-                active:true
+                conn:null
             }
         );
         this.actDir = "inputs";
