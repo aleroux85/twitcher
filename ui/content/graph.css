@@ -4,6 +4,17 @@
     margin-top: var(--step-1);
     box-shadow: rgba(0, 0, 0, 0.4) 0px 4px 12px;
     height: 100%;
+
+    /* Safari */
+    -webkit-user-select: none;
+    /* Konqueror HTML */
+    -khtml-user-select: none;
+    /* Firefox */
+    -moz-user-select: none;
+    /* Internet Explorer/Edge */
+    -ms-user-select: none;
+    /* Non-prefixed version, supported by most modern browsers */
+    user-select: none;
 }
 
 #graph > .buttons {
@@ -28,4 +39,8 @@
 
 #graph > .buttons > .connector.active {
     background-color: var(--clr-green);
+}
+
+#graph .edge .hide {
+    display: none;
 }

@@ -41,7 +41,7 @@ ui/dist/index.js: ui/layout.js ui/content/network.js ui/content/command.js ui/co
 	@echo "Built test version → ui/dist/index.js"
 
 ui/content/components.js: $(wildcard ui/content/components/*.js)
-	$(call compose,ui/content/components/parent.js,make/js-comp.map,ui/content/components.js)
+	$(call compose,ui/content/components/components.js,make/js-comp.map,ui/content/components.js)
 	@echo "Built test version → ui/content/components.js"
 
 flash:

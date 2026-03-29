@@ -7,7 +7,7 @@ class uiButton extends uiComponents {
         this.outputs.push(
             {
                 type:"bool",
-                connected:null
+                conns:[]
             }
         );
         this.actDir = "outputs";

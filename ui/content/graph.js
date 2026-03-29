@@ -8,6 +8,7 @@ function setView() { svg.setAttribute('viewBox', [viewBox.x, viewBox.y, viewBox.
 setView();
 
 let elements = {}; // {id,type,x,y,r,label,value}
+let gEdges = [];
 let idCounter = 1;
 let idEdgeCounter = 1;
 let selected = null;
@@ -49,7 +50,9 @@ function toggleConnectMode() {
         wireMode = true;
     }
 
-    highlightSelection();
+    if (selected) {
+        highlightSelection();
+    }
 }
 
 function createNode(id,obj) {
@@ -94,61 +97,7 @@ function createEdge(id1,id2) {
     let el1 = elements[id1];
     let el2 = elements[id2];
 
-    if (el1.actDir === "inputs") {
-        [el1,el2] = [el2,el1];
-    }
-
-    const dx = el2.x - el1.x;
-    const dy = el2.y - el1.y;
-    const r = Math.atan2(-dy,dx);
-    el1.setWireAngle(r);
-    el2.setWireAngle(r+Math.PI);
-    const [x1, y1, xh1, yh1] = el1.wireCoords();
-    const [x2, y2, xh2, yh2] = el2.wireCoords();
-
-    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.classList.add('edge');
-    g.dataset.id = 'e'+idEdgeCounter++;
-    g.dataset.type = 'wire';
-    // const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-    // use.setAttribute('href', '#sym-wire');
-    // use.children[0].setAttribute('d', `M ${el1.x} ${el1.y} L ${el2.x} ${el2.y}`);
-    // g.appendChild(use);
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', `M ${x1},${y1} C ${xh1},${yh1} ${xh2},${yh2} ${x2},${y2}`);
-    path.setAttribute('stroke', '#BFCDE7');
-    path.setAttribute('stroke-width', 1.8);
-    path.setAttribute('fill', 'none');
-    g.appendChild(path);
-    // const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    // label.setAttribute('x', 0);
-    // label.setAttribute('y', 36);
-    // label.setAttribute('font-size', 10);
-    // label.setAttribute('text-anchor', 'middle');
-    // label.setAttribute('fill', '#9fbcd9');
-    // label.textContent = obj.name || '';
-    // g.appendChild(label);
-
-    // selection bubble
-    // const sel = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    // sel.setAttribute('x', -60);
-    // sel.setAttribute('y', -40);
-    // sel.setAttribute('width', 120);
-    // sel.setAttribute('height', 80);
-    // sel.setAttribute('rx', 10);
-    // sel.setAttribute('fill', 'none');
-    // sel.setAttribute('stroke', '#7cc4ff');
-    // sel.setAttribute('stroke-width', 0.8);
-    // sel.style.display = 'none';
-    // g.appendChild(sel);
-
-    // pointer interactions
-    // g.addEventListener('pointerdown', nodePointerDown);
-    nodes.insertBefore(g,nodes.children[0]);
-
-    el1.setWire(el2,g);
-    el2.setWire(el1,g);
-    return g;
+    new gEdge(el1, el2);
 }
 
 // render nodes from elements
@@ -164,16 +113,12 @@ function render() {
 
 // selection management
 function selectById(id) {
-    if (id === null) {
-        selected = null;
-    } else {
-        if (elements['n'+id].marked) {
-            createEdge(selected.name, 'n'+id);
-        }
-
-        selected = elements['n'+id];
-        selected.id = id;
+    if (elements['n'+id].marked) {
+        createEdge(selected.name, 'n'+id);
     }
+
+    selected = elements['n'+id];
+    selected.id = id;
     // updatePropsPanel();
     highlightSelection();
 }
@@ -183,30 +128,31 @@ function highlightSelection() {
     let connDir = 'inputs';
     let connType = 'bool';
 
-    if (selected && wireMode) {
-        let elc = elements['n'+selected.id];
+    if (wireMode) {
+        let n = elements['n'+selected.id];
 
-        if (!elc[elc.actDir][elc.actNum].connected) {
-            connect = true;
-            connType = elc[elc.actDir][elc.actNum].type;
-
-            if (elc.actDir === "inputs") connDir = 'outputs';
+        if (n.actDir === 'outputs') {
+            if (n.outputs[n.actNum].conns.length === 0) {
+                connect = true;
+                connType = n.outputs[n.actNum].type;
+            }
+        } else {
+            if (!n.inputs[n.actNum].conn) {
+                connect = true;
+                connType = n.inputs[n.actNum].type;
+                connDir = 'outputs';
+            }
         }
     }
 
-    Object.entries(elements).forEach(([key,elm]) => {
-        if (!selected) {
-            elm.highlight('hide');
-            return;
-        }
-
+    Object.entries(elements).forEach(([key,n]) => {
         if (key === selected.name) {
-            elm.highlight('select');
+            n.highlight('select');
         } else {
-            if (connect) {
-                elm.highlight('mark');
+            if (connect && n.canTakeConn(connType)) {
+                n.highlight('mark');
             } else {
-                elm.highlight('hide');
+                n.highlight('hide');
             }
         }
     });
@@ -240,7 +186,11 @@ function svgPoint(evt) {
 // clicking blank deselects
 svg.addEventListener('pointerdown', function (e) {
     if (e.target === svg || e.target === document.getElementById('grid')) {
-        selectById(null);
+        selected = null;
+
+        Object.entries(elements).forEach(([key,n]) => {
+            n.highlight('hide');
+        });
     }
 
     // pan start when space pressed or middle button
@@ -297,11 +247,11 @@ svg.addEventListener('wheel', function (e) {
 
 new uiButton(-200, -40);
 new uiLED(100, 40);
-new uiGPO(200, 40);
+new uiGPO(200, 0);
 
 // saveGraph();
 
-// toGraph();
+toGraph();
 
-createEdge("n2","n1")
-createEdge("n1","n3")
+// createEdge("n2","n1")
+// createEdge("n1","n3")
