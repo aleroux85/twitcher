@@ -19,10 +19,16 @@ class uiComponents {
         elements[this.name] = this;
     }
 
+    canTakeConn(connType){
+        return true;
+    }
+
     setCoords(x = 0, y = 0) {
         this.x = x;
         this.y = y;
     }
+
+    coords() {return [this.x, this.y]}
 
     setName(name) {
         this.name = name;
@@ -38,7 +44,18 @@ class uiComponents {
             case 'select':
                 this.marked = false;
                 this.gElmHighlight.style.display = 'block';
-                this.gElmHighlight.setAttribute('stroke','#BFCDE7')
+                this.gElmHighlight.setAttribute('stroke','#BFCDE7');
+
+                this.outputs.forEach(output => {
+                    output.conns.forEach(conn => {
+                        conn.start.handleDisplay(true);
+                    });
+                });
+                this.inputs.forEach(input => {
+                    if (input.conn) {
+                        input.conn.end.handleDisplay(true);
+                    }
+                });
                 break;
 
             case 'mark':
@@ -50,40 +67,41 @@ class uiComponents {
             default:
                 this.marked = false;
                 this.gElmHighlight.style.display = 'none';
+
+                this.outputs.forEach(output => {
+                    output.conns.forEach(conn => {
+                        conn.start.handleDisplay(false);
+                    });
+                });
+                this.inputs.forEach(input => {
+                    if (input.conn) {
+                        input.conn.end.handleDisplay(false);
+                    }
+                });
                 break;
         }
     }
 
-    setWireAngle(r) {
-        this[this.actDir][this.actNum].r = r;
-        this[this.actDir][this.actNum].x = 50*Math.cos(r);
-        this[this.actDir][this.actNum].y = 50*Math.sin(r);
-        this[this.actDir][this.actNum].xh = 100*Math.cos(r);
-        this[this.actDir][this.actNum].yh = 100*Math.sin(r);
-    }
-
-    wireCoords(r = 0) {
-        const a = this[this.actDir][this.actNum];
-        return [this.x + a.x, this.y - a.y, this.x + a.xh, this.y - a.yh];
-    }
-
-    setWire(conn,elm) {
-        this[this.actDir][this.actNum].connected = conn;
-        this[this.actDir][this.actNum].elm = elm;
+    addEdge(e) {
+        if (this.actDir === 'outputs') {
+            this[this.actDir][this.actNum].conns.push(e);
+        } else {
+            this[this.actDir][this.actNum].conn = e;
+        }
     }
 
     nodePointerDown(e) {
         e.stopPropagation();
-        // this.setPointerCapture(e.pointerId);
-        // const id = this.dataset.id;
-        // const el = elements[id];
         selectById(this.id);
         this.dragging = true;
-        // pointerState.node = el;
         this.draggingStart = svgPoint(e);
         this.draggingOrig = { x: this.x, y: this.y };
-        this.gElm.addEventListener('pointermove', (e) => this.nodePointerMove(e));
-        this.gElm.addEventListener('pointerup', (e) => this.nodePointerUp(e));
+
+        this._onNodePointerMove = (e) => this.nodePointerMove(e);
+        this._onNodePointerUp = (e) => this.nodePointerUp(e);
+
+        this.gElm.addEventListener('pointermove', this._onNodePointerMove);
+        this.gElm.addEventListener('pointerup', this._onNodePointerUp);
     }
 
     nodePointerMove(e) {
@@ -92,37 +110,26 @@ class uiComponents {
         const dx = p.x - this.draggingStart.x, dy = p.y - this.draggingStart.y;
         this.x = this.draggingOrig.x + dx;
         this.y = this.draggingOrig.y + dy;
-        // updateNodeTransform();
         this.gElm.setAttribute('transform', `translate(${this.x} ${this.y}) rotate(${this.r || 0})`);
         this.outputs.forEach(output => {
-            const d = output.elm.children[0].getAttribute('d');
-            const match = d.match(/C\s[-\d.]+,[-\d.]+\s([-\d.]+),([-\d.]+)\s([-\d.]+),([-\d.]+)/);
-            if (!match) return;
-            const [x, y, xh, yh] = this.wireCoords();
-            output.elm.children[0].setAttribute('d', `M ${x},${y} C ${xh},${yh} ${match[1]},${match[2]} ${match[3]},${match[4]}`);
+            output.conns.forEach(conn => {
+                conn.moveStart();
+            });
         });
         this.inputs.forEach(input => {
-            const d = input.elm.children[0].getAttribute('d');
-            const match = d.match(/M\s([-\d.]+),([-\d.]+)\sC\s([-\d.]+),([-\d.]+)/);
-            if (!match) return;
-            const [x, y, xh, yh] = this.wireCoords();
-            input.elm.children[0].setAttribute('d', `M ${match[1]},${match[2]} C ${match[3]},${match[4]} ${xh},${yh} ${x},${y}`);
+            if (input.conn) {
+                input.conn.moveEnd();
+            }
         });
-        // updatePropsPanel();
     }
 
     nodePointerUp(e) {
         if (this.dragging) {
-            try { this.gElm.removeEventListener('pointermove', this.nodePointerMove);
-                this.gElm.removeEventListener('pointerup', this.nodePointerUp);
-            } catch (e) { }
+            this.gElm.removeEventListener('pointermove', this._onNodePointerMove);
+            this.gElm.removeEventListener('pointerup', this._onNodePointerUp);
+            delete this._onNodePointerMove;
+            delete this._onNodePointerUp;
         }
         this.dragging = false;
     }
 }
-
-/* {{button-js}} */
-
-/* {{led-js}} */
-
-/* {{gpo-js}} */

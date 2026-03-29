@@ -1,0 +1,14 @@
+services:
+  node:
+    image: node:20
+    container_name: node_gemini
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+      - node_cache:/root/.npm
+    stdin_open: true
+    tty: true
+    command: bash
+
+volumes:
+  node_cache:
