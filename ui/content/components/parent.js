@@ -17,6 +17,8 @@ class uiComponents {
         this.socket = socket;
 
         elements[this.name] = this;
+
+        this.clearSettings();
     }
 
     canTakeConn(connType){
@@ -40,14 +42,12 @@ class uiComponents {
     }
 
     highlight(s) {
-        const settings = document.getElementById('settings');
-
         switch (s) {
             case 'select':
                 this.marked = false;
                 this.gElmHighlight.style.display = 'block';
                 this.gElmHighlight.setAttribute('stroke','#BFCDE7');
-                settings.innerHTML = `<h3>Settings here</h3>`;
+                this.createSettings();
 
                 this.outputs.forEach(output => {
                     output.conns.forEach(conn => {
@@ -65,13 +65,11 @@ class uiComponents {
                 this.marked = true;
                 this.gElmHighlight.style.display = 'block';
                 this.gElmHighlight.setAttribute('stroke','#4CAF50');
-                settings.innerHTML = "";
                 break;
         
             default:
                 this.marked = false;
                 this.gElmHighlight.style.display = 'none';
-                settings.innerHTML = "";
 
                 this.outputs.forEach(output => {
                     output.conns.forEach(conn => {
@@ -85,6 +83,22 @@ class uiComponents {
                 });
                 break;
         }
+    }
+
+    clearSettings() {
+        const settings = document.getElementById('settings');
+        settings.innerHTML = "<h3>Settings</h3><p>No node selected</p>";
+    }
+
+    createSettings() {
+        const settings = document.getElementById('settings');
+        settings.innerHTML = `
+            <h3>Settings</h3>
+            <label>Label: <input type="text" id="label-input" value="${this.label}"></label>
+        `;
+        document.getElementById('label-input').addEventListener('change', (e) => {
+            this.label = e.target.value;
+        });
     }
 
     addEdge(e) {
